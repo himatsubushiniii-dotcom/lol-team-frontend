@@ -80,18 +80,49 @@ func getAllowedOrigins() []string {
 }
 
 // CORS設定を修正
+// func corsMiddleware(next http.HandlerFunc, allowedOrigins []string) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		origin := r.Header.Get("Origin")
+
+// 		// オリジンが許可リストに含まれているかチェック
+// 		if isOriginAllowed(origin, allowedOrigins) {
+// 			w.Header().Set("Access-Control-Allow-Origin", origin)
+// 			w.Header().Set("Access-Control-Allow-Credentials", "true")
+// 		}
+
+// 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+// 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+// 		if r.Method == "OPTIONS" {
+// 			w.WriteHeader(http.StatusOK)
+// 			return
+// 		}
+
+// 		next(w, r)
+// 	}
+// }
+
+// 本番の場合下記をコメントアウトを解除する
 func corsMiddleware(next http.HandlerFunc, allowedOrigins []string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		// オリジンが許可リストに含まれているかチェック
-		if isOriginAllowed(origin, allowedOrigins) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		// オリジンが空の場合は拒否（直接APIを叩いている可能性）
+		if origin == "" {
+			http.Error(w, "Origin header required", http.StatusForbidden)
+			return
 		}
 
+		// 許可リストチェック
+		if !isOriginAllowed(origin, allowedOrigins) {
+			http.Error(w, "Origin not allowed", http.StatusForbidden)
+			return
+		}
+
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Max-Age", "3600") // プリフライトキャッシュ
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -101,37 +132,6 @@ func corsMiddleware(next http.HandlerFunc, allowedOrigins []string) http.Handler
 		next(w, r)
 	}
 }
-
-// 本番の場合下記をコメントアウトを解除する
-// func corsMiddleware(next http.HandlerFunc, allowedOrigins []string) http.HandlerFunc {
-//     return func(w http.ResponseWriter, r *http.Request) {
-//         origin := r.Header.Get("Origin")
-
-//         // オリジンが空の場合は拒否（直接APIを叩いている可能性）
-//         if origin == "" {
-//             http.Error(w, "Origin header required", http.StatusForbidden)
-//             return
-//         }
-
-//         // 許可リストチェック
-//         if !isOriginAllowed(origin, allowedOrigins) {
-//             http.Error(w, "Origin not allowed", http.StatusForbidden)
-//             return
-//         }
-
-//         w.Header().Set("Access-Control-Allow-Origin", origin)
-//         w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-//         w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-//         w.Header().Set("Access-Control-Max-Age", "3600") // プリフライトキャッシュ
-
-//         if r.Method == "OPTIONS" {
-//             w.WriteHeader(http.StatusOK)
-//             return
-//         }
-
-//         next(w, r)
-//     }
-// }
 
 // オリジンが許可されているかチェック
 func isOriginAllowed(origin string, allowedOrigins []string) bool {

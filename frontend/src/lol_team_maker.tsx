@@ -2,7 +2,45 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Users, Trash2, Shuffle, Loader2 } from "lucide-react";
 
 // ロールの定義
-const ROLES = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
+type Role = "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT";
+
+interface Player {
+  id: number;
+  summonerName: string;
+  tag: string;
+  tier: string;
+  rank: string;
+  lp: number;
+  rating: number;
+  profileIcon: number;
+  preferredRoles: Role[];
+  assignedRole?: Role;
+}
+
+interface RankData {
+  tier: string;
+  rank: string;
+  lp: number;
+  rating: number;
+  profileIcon: number;
+}
+
+interface TeamResult {
+  blueTeam: Player[];
+  redTeam: Player[];
+  avgRating1: number;
+  avgRating2: number;
+  avgTier1: { tier: string; rank: string };
+  avgTier2: { tier: string; rank: string };
+  diff: number;
+}
+
+interface AddResult {
+  success: { input: string; player: Player }[];
+  failed: { input: string; error: string }[];
+}
+
+const ROLES: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
 
 // 全てのランクオプションを定義
 const RANK_OPTIONS = [
@@ -40,7 +78,10 @@ const RANK_OPTIONS = [
 ];
 
 // ロールアイコン(SVG)
-const RoleIcon = ({ role, size = 24 }: { role: string; size?: number }) => {
+const RoleIcon: React.FC<{ role: Role; size?: number }> = ({
+  role,
+  size = 24,
+}) => {
   const icons: { [key: string]: JSX.Element } = {
     TOP: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -94,7 +135,7 @@ const RoleIcon = ({ role, size = 24 }: { role: string; size?: number }) => {
 };
 
 // ティアからレートへの変換(簡易版)
-const ratingToTier = (rating) => {
+const ratingToTier = (rating: number): { tier: string; rank: string } => {
   if (rating >= 3600) return { tier: "CHALLENGER", rank: "I" };
   if (rating >= 3200) return { tier: "GRANDMASTER", rank: "I" };
   if (rating >= 2800) return { tier: "MASTER", rank: "I" };
@@ -122,8 +163,8 @@ const ratingToTier = (rating) => {
   return { tier: "IRON", rank: "IV" };
 };
 
-const tierToRating = (tier, rank, lp) => {
-  const tierValues = {
+const tierToRating = (tier: string, rank: string, lp: number): number => {
+  const tierValues: { [key: string]: number } = {
     IRON: 0,
     BRONZE: 400,
     SILVER: 800,
@@ -135,16 +176,24 @@ const tierToRating = (tier, rank, lp) => {
     GRANDMASTER: 3200,
     CHALLENGER: 3600,
   };
-  const rankValues = { IV: 0, III: 100, II: 200, I: 300 };
+  const rankValues: { [key: string]: number } = {
+    IV: 0,
+    III: 100,
+    II: 200,
+    I: 300,
+  };
   return (tierValues[tier] || 0) + (rankValues[rank] || 0) + (lp || 0);
 };
 
 // Riot APIからランク情報を取得
-const fetchRankFromAPI = async (gameName, tagLine) => {
-  const API_URL = "https://lol-team-backend.onrender.com/api/rank";
+const fetchRankFromAPI = async (
+  gameName: string,
+  tagLine: string
+): Promise<RankData> => {
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(`${API_URL}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -159,34 +208,18 @@ const fetchRankFromAPI = async (gameName, tagLine) => {
       throw new Error("");
     }
 
-    const data = await response.json();
+    const data: RankData = await response.json();
     return data;
   } catch (error) {
     throw new Error("正しいアカウントを入力してください。(例:Player#JP1) ");
   }
 };
 
-// モックAPIレスポンス(テスト用・本番では削除)
-const mockFetchRank = async (summonerName, tag) => {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  const tiers = [
-    "IRON",
-    "BRONZE",
-    "SILVER",
-    "GOLD",
-    "PLATINUM",
-    "EMERALD",
-    "DIAMOND",
-  ];
-  const ranks = ["IV", "III", "II", "I"];
-  const tier = tiers[Math.floor(Math.random() * tiers.length)];
-  const rank = ranks[Math.floor(Math.random() * ranks.length)];
-  const lp = Math.floor(Math.random() * 100);
-  return { tier, rank, lp, rating: tierToRating(tier, rank, lp) };
-};
-
 // チーム分けアルゴリズム
-const divideTeams = (players, previousTeam1 = null) => {
+const divideTeams = (
+  players: Player[],
+  previousTeam1: Player[] | null = null
+): { team1: Player[]; team2: Player[] } | null => {
   let bestDiff = Infinity;
   let bestTeams = null;
 
@@ -224,7 +257,7 @@ const divideTeams = (players, previousTeam1 = null) => {
   return bestTeams;
 };
 
-const countBits = (n) => {
+const countBits = (n: number): number => {
   let count = 0;
   while (n) {
     count += n & 1;
@@ -234,10 +267,10 @@ const countBits = (n) => {
 };
 
 // ロール配分
-const assignRoles = (team) => {
-  const roleOrder = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
-  const availableRoles = [...roleOrder];
-  const assignments = [];
+const assignRoles = (team: Player[]): Player[] => {
+  const roleOrder: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
+  const availableRoles: Role[] = [...roleOrder];
+  const assignments: Player[] = [];
 
   const sorted = [...team].sort(
     (a, b) => a.preferredRoles.length - b.preferredRoles.length
@@ -245,30 +278,35 @@ const assignRoles = (team) => {
 
   sorted.forEach((player) => {
     const possibleRoles = availableRoles.filter((r) =>
-      player.preferredRoles.includes(r)
+      player.preferredRoles.includes(r as Role)
     );
-    const assignedRole =
+    const assignedRole: Role =
       possibleRoles.length > 0 ? possibleRoles[0] : availableRoles[0];
     assignments.push({ ...player, assignedRole });
-    availableRoles.splice(availableRoles.indexOf(assignedRole), 1);
+    const index = availableRoles.indexOf(assignedRole);
+    if (index > -1) {
+      availableRoles.splice(index, 1);
+    }
   });
 
   return assignments.sort(
     (a, b) =>
-      roleOrder.indexOf(a.assignedRole) - roleOrder.indexOf(b.assignedRole)
+      roleOrder.indexOf(a.assignedRole!) - roleOrder.indexOf(b.assignedRole!)
   );
 };
 
-export default function LoLTeamMaker() {
-  const [players, setPlayers] = useState([]);
-  const [currentInput, setCurrentInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [addResults, setAddResults] = useState(null);
-  const [sortType, setSortType] = useState("none");
-  const [currentProcessing, setCurrentProcessing] = useState("");
-  const [processedCount, setProcessedCount] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
+export default function LoLTeamMaker(): JSX.Element {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [currentInput, setCurrentInput] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [result, setResult] = useState<TeamResult | null>(null);
+  const [addResults, setAddResults] = useState<AddResult | null>(null);
+  const [sortType, setSortType] = useState<
+    "none" | "name" | "rating-high" | "rating-low"
+  >("none");
+  const [currentProcessing, setCurrentProcessing] = useState<string>("");
+  const [processedCount, setProcessedCount] = useState<number>(0);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   // ローカルストレージからプレイヤーを読み込む（初回のみ）
   useEffect(() => {
@@ -312,7 +350,7 @@ export default function LoLTeamMaker() {
   }, [players, sortType]);
 
   // 全ロール選択/解除ボタン
-  const toggleAllRoles = (playerId) => {
+  const toggleAllRoles = (playerId: number): void => {
     setPlayers(
       players.map((player) => {
         if (player.id === playerId) {
@@ -329,7 +367,7 @@ export default function LoLTeamMaker() {
   };
 
   // プレイヤーのロールを切り替える関数
-  const togglePlayerRole = (playerId, role) => {
+  const togglePlayerRole = (playerId: number, role: Role): void => {
     setPlayers(
       players.map((player) => {
         if (player.id === playerId) {
@@ -345,7 +383,11 @@ export default function LoLTeamMaker() {
     setResult(null);
   };
   // ✅ ここに追加
-  const changePlayerRank = (playerId, newTier, newRank) => {
+  const changePlayerRank = (
+    playerId: number,
+    newTier: string,
+    newRank: string
+  ): void => {
     setPlayers(
       players.map((player) => {
         if (player.id === playerId) {
@@ -363,11 +405,13 @@ export default function LoLTeamMaker() {
     );
     setResult(null);
   };
-  const removePlayer = (id) => {
+
+  const removePlayer = (id: number): void => {
     setPlayers(players.filter((p) => p.id !== id));
     setResult(null);
   };
-  const addPlayer = async () => {
+
+  const addPlayer = async (): Promise<void> => {
     setAddResults(null);
 
     if (!currentInput.trim()) {
@@ -457,7 +501,10 @@ export default function LoLTeamMaker() {
       } catch (error) {
         failedList.push({
           input: trimmedLine,
-          error: error.message || "プレイヤー情報の取得に失敗しました",
+          error:
+            error instanceof Error
+              ? error.message
+              : "プレイヤー情報の取得に失敗しました",
         });
       }
     }
@@ -485,13 +532,20 @@ export default function LoLTeamMaker() {
     setProcessedCount(0);
     setTotalCount(0);
   };
-  const createTeams = () => {
+
+  const createTeams = (): void => {
     if (players.length !== 10) {
       alert("10人揃ってから実行してください");
       return;
     }
 
-    const teams = divideTeams(players, result?.blueTeam);
+    const teams = divideTeams(players, result?.blueTeam || null);
+
+    if (!teams) {
+      alert("チーム分けに失敗しました");
+      return;
+    }
+
     const team1WithRoles = assignRoles(teams.team1);
     const team2WithRoles = assignRoles(teams.team2);
 
@@ -972,7 +1026,7 @@ export default function LoLTeamMaker() {
                       >
                         <div className="flex items-center gap-3">
                           <div style={{ color: "#0A84FF" }}>
-                            <RoleIcon role={player.assignedRole} size={32} />
+                            <RoleIcon role={player.assignedRole!} size={32} />
                           </div>
                           <div className="flex flex-col items-center gap-2 flex-shrink-0 w-20">
                             <img
@@ -1064,7 +1118,7 @@ export default function LoLTeamMaker() {
                       >
                         <div className="flex items-center gap-3">
                           <div style={{ color: "#DC3545" }}>
-                            <RoleIcon role={player.assignedRole} size={32} />
+                            <RoleIcon role={player.assignedRole!} size={32} />
                           </div>
                           <div className="flex flex-col items-center gap-2 flex-shrink-0 w-20">
                             <img
