@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
   "name": "lol-team-frontend",
   "private": true,
   "version": "0.0.0",
