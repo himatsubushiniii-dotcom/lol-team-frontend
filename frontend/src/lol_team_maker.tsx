@@ -141,7 +141,7 @@ const tierToRating = (tier, rank, lp) => {
 
 // Riot APIからランク情報を取得
 const fetchRankFromAPI = async (gameName, tagLine) => {
-  const API_URL = "https://lol-team-backend.onrender.com";
+  const API_URL = "https://lol-team-backend.onrender.com/api/rank";
 
   try {
     const response = await fetch(API_URL, {
