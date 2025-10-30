@@ -2,11 +2,980 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
+* {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
     sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+}
+
+/* チーム分け結果画面の主要スタイル */
+
+/* 結果モーダルオーバーレイ */
+.result-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+}
+
+@media (min-width: 640px) {
+  .result-modal-overlay {
+    padding: 1rem;
+  }
+}
+
+/* 結果コンテナ */
+.result-container {
+  background: linear-gradient(
+    135deg,
+    rgba(1, 10, 19, 0.98) 0%,
+    rgba(0, 9, 19, 0.98) 100%
+  );
+  border: 2px solid #c89b3c;
+  box-shadow: 0 0 50px rgba(200, 155, 60, 0.5);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  max-width: 64rem;
+  width: 100%;
+  max-height: 96vh;
+  overflow-y: auto;
+}
+
+@media (min-width: 640px) {
+  .result-container {
+    padding: 1rem;
+  }
+}
+
+/* 結果タイトル */
+.result-title {
+  color: #c89b3c;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+@media (min-width: 640px) {
+  .result-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* チームグリッドコンテナ */
+.teams-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  min-width: 800px;
+}
+
+/* ブルーチームカード */
+.blue-team-card {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 132, 255, 0.1) 0%,
+    rgba(10, 132, 255, 0.05) 100%
+  );
+  border: 2px solid #0a84ff;
+  box-shadow: 0 0 30px rgba(10, 132, 255, 0.3);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.blue-team-title {
+  color: #0a84ff;
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+/* レッドチームカード */
+.red-team-card {
+  background: linear-gradient(
+    135deg,
+    rgba(220, 53, 69, 0.1) 0%,
+    rgba(220, 53, 69, 0.05) 100%
+  );
+  border: 2px solid #dc3545;
+  box-shadow: 0 0 30px rgba(220, 53, 69, 0.3);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.red-team-title {
+  color: #dc3545;
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+/* プレイヤーカード（ブルーチーム用） */
+.blue-player-card {
+  background: rgba(10, 132, 255, 0.1);
+  border: 1px solid rgba(10, 132, 255, 0.3);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+}
+
+/* プレイヤーカード（レッドチーム用） */
+.red-player-card {
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+}
+
+/* プロフィールアイコン（ブルーチーム用） */
+.blue-profile-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #0a84ff;
+  display: block;
+  margin: 0 auto;
+  vertical-align: middle;
+}
+
+.red-profile-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #dc3545;
+  display: block;
+  margin: 0 auto;
+  vertical-align: middle;
+}
+
+/* ロールアイコン色 */
+.blue-role-icon {
+  color: #0a84ff;
+}
+
+.red-role-icon {
+  color: #dc3545;
+}
+
+/* 割り当てられたロール名 */
+.blue-assigned-role {
+  color: #5dade2;
+  font-weight: bold;
+  font-size: 14px;
+  display: block;
+  line-height: 1.2;
+}
+
+.red-assigned-role {
+  color: #dc3545;
+  font-weight: bold;
+  font-size: 14px;
+  display: block;
+  line-height: 1.2;
+}
+
+/* ローディング表示 */
+.loading-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 9999;
+  font-size: 18px;
+}
+/* サモナー名 */
+.summoner-name {
+  color: white;
+  font-weight: 600;
+  font-size: 9px;
+  display: block;
+  line-height: 1.2;
+  word-break: break-all;
+}
+
+/* ランク情報テキスト */
+.rank-info {
+  font-size: 10px;
+  color: #d1d5db;
+  margin-bottom: 2px;
+}
+
+.rank-info div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* テーブルレイアウト用のスタイル */
+.player-table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.player-table-row {
+  display: table-row;
+}
+
+.player-table-cell-icon {
+  display: table-cell;
+  vertical-align: middle;
+  width: 30px;
+  padding-right: 6px;
+  line-height: 1;
+}
+
+/* SVGアイコン自体の中央揃え */
+.player-table-cell-icon svg {
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.player-table-cell-profile {
+  display: table-cell;
+  vertical-align: middle;
+  width: 50px;
+  padding-right: 8px;
+  text-align: center;
+}
+
+.player-table-cell-info {
+  display: table-cell;
+  vertical-align: middle;
+  padding-left: 6px;
+  width: auto;
+}
+
+
+/* ボタンエリア */
+.button-area {
+  /* 必要に応じてスタイルを追加 */
+}
+
+/* クリップボードコピー・ダウンロードボタン */
+.action-button {
+  padding: 0.5rem 1rem;
+  color: white;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  background: rgba(200, 155, 60, 0.4);
+  border: 2px solid #c89b3c;
+  color: #f0e6d2;
+  box-shadow: 0 0 10px rgba(200, 155, 60, 0.3);
+}
+
+.action-button:hover {
+  background: rgba(200, 155, 60, 0.6);  /* 追加 */
+  box-shadow: 0 0 15px rgba(200, 155, 60, 0.5);  /* 追加 */
+}
+
+.action-button:active {
+  transform: scale(0.95);
+  background: rgba(200, 155, 60, 0.3);  /* 追加 */
+}
+
+.action-button-beta {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* 再チーム分けボタン */
+.reshuffle-button {
+  padding: 0.5rem 1rem;
+  color: white;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  background: linear-gradient(135deg, #0a84ff 0%, #0066cc 100%);
+  border: 2px solid #0a84ff;
+  box-shadow: 0 0 20px rgba(10, 132, 255, 0.5);
+}
+
+.reshuffle-button:hover {
+  background: linear-gradient(135deg, #3d9fff 0%, #0a84ff 100%);  /* 追加 */
+  box-shadow: 0 0 25px rgba(10, 132, 255, 0.7);  /* 追加 */
+}
+
+.reshuffle-button:active {
+  transform: scale(0.95);
+  background: linear-gradient(135deg, #0066cc 0%, #004c99 100%);  /* 追加 */
+}
+
+/* 閉じるボタン */
+.close-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  background: rgba(100, 100, 100, 0.5);
+  border: 2px solid rgba(150, 150, 150, 0.7);
+  color: #e0e0e0;
+  box-shadow: 0 0 10px rgba(100, 100, 100, 0.3);
+}
+
+.close-button:hover {
+  background: rgba(120, 120, 120, 0.6);  /* 追加 */
+  border-color: rgba(170, 170, 170, 0.8);  /* 追加 */
+  box-shadow: 0 0 15px rgba(120, 120, 120, 0.5);  /* 追加 */
+}
+
+.close-button:active {
+  transform: scale(0.95);
+  background: rgba(80, 80, 80, 0.5);  /* 追加 */
+}
+
+/* 平均ランク表示 */
+.avg-rank-text {
+  color: white;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+}
+/* メインコンテナ */
+.main-container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #020617, #172554, #020617);
+  background-image: 
+    radial-gradient(circle at 20% 50%, rgba(10, 132, 255, 0.15) 0%, transparent 50%), 
+    radial-gradient(circle at 80% 80%, rgba(200, 155, 60, 0.15) 0%, transparent 50%);
+  padding: 1rem;
+}
+
+/* タイトルグラデーション */
+.title-gradient {
+  background: linear-gradient(135deg, #C89B3C 0%, #F0E6D2 50%, #C89B3C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* カード共通スタイル */
+.card-base {
+  background: linear-gradient(135deg, rgba(1, 10, 19, 0.9) 0%, rgba(0, 9, 19, 0.95) 100%);
+  border: 2px solid #0A1428;
+  box-shadow: 0 0 30px rgba(10, 132, 255, 0.3), inset 0 0 30px rgba(10, 132, 255, 0.05);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+/* 入力フィールド */
+.input-field {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  color: white;
+  background: rgba(1, 10, 19, 0.6);
+  border: 2px solid rgba(10, 132, 255, 0.5);
+  box-shadow: 0 0 10px rgba(10, 132, 255, 0.2);
+  transition: all 0.2s;
+}
+
+.input-field:focus {
+  border-color: rgba(10, 132, 255, 0.8);
+  outline: none;
+}
+
+.input-field::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* プレイヤーカード（登録リスト用） */
+.player-card-list {
+  background: rgba(10, 132, 255, 0.05);
+  border: 1px solid rgba(10, 132, 255, 0.2);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+}
+
+/* プロフィールアイコン（登録リスト用） */
+.profile-icon-list {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 2px solid #0A84FF;
+  flex-shrink: 0;
+}
+
+/* ロールボタン */
+.role-button {
+  padding: 0.375rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.role-button:hover {
+  transform: scale(1.05);
+}
+
+.role-button-selected {
+  background: rgba(10, 132, 255, 0.8);
+  color: #fff;
+  border: 1px solid rgba(10, 132, 255, 0.8);
+}
+
+.role-button-unselected {
+  background: rgba(50, 50, 50, 0.4);
+  color: rgba(150, 150, 150, 0.8);
+  border: 1px solid rgba(100, 100, 100, 0.3);
+}
+
+/* ランクセレクト */
+.rank-select {
+  background: rgba(200, 155, 60, 0.2);
+  color: #C89B3C;
+  border: 2px solid rgba(200, 155, 60, 0.5);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-weight: bold;
+  width: 140px;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+
+.rank-select option {
+  background: #0A1428;
+  color: #C89B3C;
+}
+
+/* トグルボタン */
+.toggle-button {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: 1px solid currentColor;
+}
+
+.toggle-button-deselect {
+  background: rgba(220, 53, 69, 0.3);
+  color: #DC3545;
+}
+
+.toggle-button-select {
+  background: rgba(10, 132, 255, 0.3);
+  color: #0A84FF;
+}
+
+/* ソートボタン */
+.sort-button {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s;
+}
+
+.sort-button-active {
+  background: linear-gradient(135deg, #C89B3C 0%, #F0E6D2 50%, #C89B3C 100%);
+  color: #0A1428;
+  border: 2px solid #C89B3C;
+  font-weight: bold;
+}
+
+.sort-button-inactive {
+  background: rgba(100, 100, 100, 0.3);
+  color: #C89B3C;
+  border: 1px solid rgba(200, 155, 60, 0.3);
+}
+
+/* 追加ボタン */
+.add-button {
+  width: 100%;
+  padding: 0.625rem 1.25rem;
+  color: white;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  font-size: 1rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  position: relative;
+  margin-top: 0.75rem;
+}
+
+.add-button-enabled {
+  background: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
+  border: 2px solid #0A84FF;
+  box-shadow: 0 0 20px rgba(10, 132, 255, 0.5);
+}
+
+.add-button-disabled {
+  background: rgba(100, 100, 100, 0.5);
+  border: 2px solid #0A84FF;
+  cursor: not-allowed;
+}
+
+/* チーム分けボタン */
+.create-teams-button {
+  width: 100%;
+  padding: 0.625rem 1.25rem;
+  color: white;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  font-size: 1rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.create-teams-button-enabled {
+  background: linear-gradient(135deg, #C89B3C 0%, #F0E6D2 50%, #C89B3C 100%);
+  border: 2px solid #C89B3C;
+  box-shadow: 0 0 30px rgba(200, 155, 60, 0.5);
+  color: #0A1428;
+}
+
+.create-teams-button-disabled {
+  background: rgba(100, 100, 100, 0.3);
+  border: 2px solid rgba(100, 100, 100, 0.5);
+  color: #666;
+}
+
+/* 成功/失敗メッセージ */
+.message-success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 2px solid rgba(34, 197, 94, 0.5);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.message-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.message-processing {
+  background: rgba(10, 132, 255, 0.1);
+  border: 2px solid rgba(10, 132, 255, 0.5);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+/* プログレスバー */
+.progress-bar-container {
+  width: 100%;
+  background: #374151;
+  border-radius: 9999px;
+  height: 0.5rem;
+}
+
+.progress-bar-fill {
+  background: #0A84FF;
+  height: 0.5rem;
+  border-radius: 9999px;
+  transition: width 0.3s;
+}
+
+/* 情報ボックス */
+.info-box {
+  background: rgba(10, 132, 255, 0.05);
+  border: 1px solid rgba(10, 132, 255, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+.profile-icon-registration {
+  width: 2.5rem;        /* w-10 */
+  height: 2.5rem;       /* h-10 */
+  border-radius: 50%;   /* rounded-full */
+  border: 2px solid #0A84FF;
+  flex-shrink: 0;
+}
+
+.summoner-name-registration {
+  color: white;
+  font-weight: 600;
+  width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  flex-shrink: 0;
+  font-size: 0.875rem;  /* text-sm */
+}
+
+.rank-select-registration {
+  font-weight: bold;
+  width: 140px;
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;  /* px-2 py-1 */
+  border-radius: 0.25rem;    /* rounded */
+  cursor: pointer;
+  font-size: 0.875rem;       /* text-sm */
+  background: rgba(200, 155, 60, 0.2);
+  color: #C89B3C;
+  border: 2px solid rgba(200, 155, 60, 0.5);
+}
+
+.rank-select-registration option {
+  background: #0A1428;
+  color: #C89B3C;
+}
+
+.role-button-registration {
+  padding: 0.25rem 0.375rem;  /* px-1.5 py-1 */
+  border-radius: 0.25rem;      /* rounded */
+  font-size: 0.75rem;          /* text-xs */
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.role-button-registration:hover {
+  transform: scale(1.05);
+}
+
+.role-button-registration-selected {
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  background: rgba(10, 132, 255, 0.8);
+  color: #fff;
+  border: 1px solid rgba(10, 132, 255, 0.8);
+}
+
+.role-button-registration-selected:hover {
+  transform: scale(1.05);
+}
+
+.role-button-registration-unselected {
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  background: rgba(50, 50, 50, 0.4);
+  color: rgba(150, 150, 150, 0.8);
+  border: 1px solid rgba(100, 100, 100, 0.3);
+}
+
+.role-button-registration-unselected:hover {
+  transform: scale(1.05);
+}
+
+.toggle-all-button-registration {
+  padding: 0.25rem 0.5rem;  /* px-2 py-1 */
+  border-radius: 0.25rem;    /* rounded */
+  font-size: 0.75rem;        /* text-xs */
+  font-weight: 600;          /* font-semibold */
+  transition: all 0.2s;
+  border: 1px solid currentColor;
+}
+
+.toggle-all-button-deselect {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  background: rgba(220, 53, 69, 0.3);
+  color: #DC3545;
+  border: 1px solid currentColor;
+}
+
+.toggle-all-button-select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  background: rgba(10, 132, 255, 0.3);
+  color: #0A84FF;
+  border: 1px solid currentColor;
+}
+.player-card-registration {
+  border-radius: 0.25rem;  /* rounded */
+  padding: 0.5rem;         /* p-2 */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(10, 132, 255, 0.05);
+  border: 1px solid rgba(10, 132, 255, 0.2);
+}
+.title-icon {
+  color: #C89B3C;
+}
+
+.section-title {
+  color: #C89B3C;
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin-bottom: 0.75rem;
+}
+
+.form-label {
+  color: #C89B3C;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+.role-assignment-row {
+  margin-bottom: 2px;
+}
+/* タイトルクリック時のホバー効果 */
+.title-clickable {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.title-clickable:hover {
+  transform: scale(1.02);
+}
+
+/* サブタイトルクリック時のホバー効果 */
+.subtitle-clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+  color: #93C5FD;
+}
+
+.subtitle-clickable:hover {
+  color: #BFDBFE;
+}
+
+/* 登録プレイヤーカードの基本レイアウト */
+.player-card-registration-flex {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  overflow: hidden;
+}
+.player-info-wrapper {
+  display: table;
+  width: 100%;
+}
+
+.player-info-row {
+  display: table-row;
+}
+/* プレイヤー情報セクション（結果表示用） */
+.player-info-cell {
+  display: table-cell;
+  vertical-align: middle;
+  padding: 1px 0;
+}
+
+/* 閉じるボタン（モーダル右上） */
+.modal-close-button {
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 0.2s;
+  font-size: 1.5rem;
+  padding: 0 1rem;
+}
+
+.modal-close-button:hover {
+  color: white;
+}
+
+/* グリッドコンテナの固定レイアウト */
+.teams-grid-fixed {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+/* 希望ロール表示コンテナ */
+.preferred-roles-container {
+  margin-top: 2px;
+  line-height: 0;
+}
+
+/* 希望ロールバッジの共通スタイル */
+.preferred-role-badge {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 2px;
+  margin-bottom: 2px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  line-height: 12px; /* 高さを固定 */
+  height: 18px; /* 高さを明示的に指定 */
+  white-space: nowrap;
+}
+
+/* 希望ロールバッジ(選択済み・ブルーチーム) */
+.blue-preferred-role-active {
+  background: #0a84ff;
+  color: #fff;
+}
+
+/* 希望ロールバッジ(未選択・ブルーチーム) */
+.blue-preferred-role-inactive {
+  background: rgba(100, 100, 100, 0.3);
+  color: #aaa;
+}
+
+/* 希望ロールバッジ(選択済み・レッドチーム) */
+.red-preferred-role-active {
+  background: #dc3545;
+  color: #fff;
+}
+
+/* 希望ロールバッジ(未選択・レッドチーム) */
+.red-preferred-role-inactive {
+  background: rgba(100, 100, 100, 0.3);
+  color: #aaa;
+}
+
+/* ロールアイコンコンテナ */
+.role-icon-container {
+  display: inline-block;
+  vertical-align: middle;
+  width: 12px;
+  height: 12px;
+  line-height: 12px; /* SVGの中央配置用 */
+  margin-right: 2px;
+}
+
+.role-icon-container svg {
+  display: block; /* inline-blockではなくblock */
+  width: 12px;
+  height: 12px;
+  vertical-align: top; /* これでSVG内部のズレを防ぐ */
+}
+
+/* ロールテキスト */
+.role-text {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 12px;
+  font-size: 9px;
+  height: 12px; /* 高さを明示 */
+}
+
+/* プレイヤーカード内のレイアウト（結果表示用） - Flexbox廃止 */
+.player-card-inner-table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse; 
+}
+
+.player-card-inner-row {
+  display: table-row;
+  height: 60px;
+}
+
+.player-card-cell-role-icon {
+  display: table-cell;
+  vertical-align: middle;
+  width: 30px;
+  padding-right: 6px;
+  height: 60px;
+  line-height: 60px;
+}
+/* SVGアイコンの中央揃え */
+.player-card-cell-role-icon svg {
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.player-card-cell-profile {
+  display: table-cell;
+  vertical-align: middle;  /* top から middle に変更 */
+  width: 50px;
+  text-align: center;
+  padding-right: 8px;
+  height: 60px;
+  padding-top: 0;  /* 4px から 0 に変更 */
+}
+
+.player-card-cell-info {
+  display: table-cell;
+  vertical-align: middle;
+  width: auto;
+  padding-left: 6px;
+  height: 60px;
+}
+/* プロフィールアイコンのラッパー - 中央揃えのための追加 */
+.profile-icon-wrapper {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* サモナー名のラッパー - 中央揃えのための追加 */
+.summoner-name-wrapper {
+  display: block;
+  vertical-align: middle;
+  line-height: 1.2;  /* 1 から 1.2 に変更 */
+  margin-top: 4px;  /* 2px から 4px に変更 */
+  text-align: center;  /* 追加 */
+}
+/* ボタンエリアのtableレイアウト */
+.button-area-table {
+  display: table;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.button-area-row {
+  display: table-row;
+}
+
+.button-area-cell {
+  display: table-cell;
+  width: 50%;
+}
+
+.button-area-cell:first-child {
+  padding-right: 0.25rem;
+}
+
+.button-area-cell:last-child {
+  padding-left: 0.25rem;
+}
+
+/* 広告用スタイル追加 */
+.adsbygoogle {
+  background: rgba(10, 132, 255, 0.05);
+  border: 1px solid rgba(10, 132, 255, 0.2);
+  border-radius: 0.5rem;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 広告が読み込まれない場合の代替表示 */
+ins.adsbygoogle[data-ad-status="unfilled"] {
+  display: none !important;
 }
