@@ -271,13 +271,15 @@ const divideTeams = (
   players: Player[],
   previousTeam1: Player[] | null = null
 ): { team1: Player[]; team2: Player[] } | null => {
-  let bestDiff = Infinity;
+  let bestScore = Infinity;
   let bestTeams = null;
   const previousTeam1Ids = previousTeam1
     ? new Set(previousTeam1.map((p) => p.id))
     : null;
 
   const n = players.length;
+  const maxAttempts = 5000; // 試行回数を増やす
+  let attempts = 0;
 
   // ランダムな順序も試すために配列をシャッフル
   const shuffledPlayers = [...players];
@@ -289,8 +291,9 @@ const divideTeams = (
     ];
   }
 
-  for (let mask = 0; mask < 1 << n; mask++) {
+  for (let mask = 0; mask < 1 << n && attempts < maxAttempts; mask++) {
     if (countBits(mask) !== 5) continue;
+    attempts++;
 
     const team1 = [];
     const team2 = [];
@@ -305,25 +308,56 @@ const divideTeams = (
       const team1IDs = team1.map((p) => p.id).sort();
       const prevTeam1IDs = previousTeam1
         ? previousTeam1.map((p) => p.id).sort()
-        : []; // 👈 修正: team変数をpreviousTeam1に変更
+        : [];
       if (JSON.stringify(team1IDs) === JSON.stringify(prevTeam1IDs)) {
         continue;
       }
 
-      // チーム2が前回のチーム1と同じ（入れ替わっただけ）もスキップ
+      // チーム2が前回のチーム1と同じ(入れ替わっただけ)もスキップ
       const team2IDs = team2.map((p) => p.id).sort();
       if (JSON.stringify(team2IDs) === JSON.stringify(prevTeam1IDs)) {
         continue;
       }
     }
 
-    const sum1 = team1.reduce((s, p) => s + p.rating, 0);
-    const sum2 = team2.reduce((s, p) => s + p.rating, 0);
-    const diff = Math.abs(sum1 - sum2);
+    // ロール割り当てを試す
+    const team1WithRoles = assignRoles(team1);
+    const team2WithRoles = assignRoles(team2);
 
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      bestTeams = { team1, team2 };
+    // 総合レーティング差
+    const sum1 = team1WithRoles.reduce((s, p) => s + p.rating, 0);
+    const sum2 = team2WithRoles.reduce((s, p) => s + p.rating, 0);
+    const totalDiff = Math.abs(sum1 - sum2);
+
+    // ボットレーン(ADC + SUPPORT)のレーティング差を計算
+    const team1Bot = team1WithRoles.filter(
+      (p) => p.assignedRole === "ADC" || p.assignedRole === "SUPPORT"
+    );
+    const team2Bot = team2WithRoles.filter(
+      (p) => p.assignedRole === "ADC" || p.assignedRole === "SUPPORT"
+    );
+
+    const team1BotRating = team1Bot.reduce((s, p) => s + p.rating, 0);
+    const team2BotRating = team2Bot.reduce((s, p) => s + p.rating, 0);
+    const botDiff = Math.abs(team1BotRating - team2BotRating);
+
+    // 各ロール(TOP, JUNGLE, MID)のレーティング差
+    const roleDiffs: number[] = [];
+    ["TOP", "JUNGLE", "MID"].forEach((role) => {
+      const p1 = team1WithRoles.find((p) => p.assignedRole === role);
+      const p2 = team2WithRoles.find((p) => p.assignedRole === role);
+      if (p1 && p2) {
+        roleDiffs.push(Math.abs(p1.rating - p2.rating));
+      }
+    });
+    const maxRoleDiff = Math.max(...roleDiffs);
+
+    // スコア計算: 総合差 + ボットレーン差(重み付け) + 最大ロール差
+    const score = totalDiff + botDiff * 1.5 + maxRoleDiff * 0.5;
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestTeams = { team1: team1WithRoles, team2: team2WithRoles };
     }
   }
 
@@ -628,14 +662,19 @@ export default function LoLTeamMaker(): JSX.Element {
       return;
     }
 
-    // 👇 最大試行回数を設定
-    const maxAttempts = 50;
+    // 👇 最大試行回数を増やし、より厳密なチェックを追加
+    const maxAttempts = 100;
     let bestTeams = null;
-    let bestDiff = Infinity;
+    let bestScore = Infinity;
 
     // 前回のブルーチームのプレイヤーIDセットを作成
     const previousBlueTeamIds = result?.blueTeam
       ? new Set(result.blueTeam.map((p) => p.id))
+      : null;
+
+    // 前回のロール割り当てを保存
+    const previousBlueTeamRoles = result?.blueTeam
+      ? new Map(result.blueTeam.map((p) => [p.id, p.assignedRole]))
       : null;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -645,10 +684,24 @@ export default function LoLTeamMaker(): JSX.Element {
 
       const sum1 = teams.team1.reduce((s, p) => s + p.rating, 0);
       const sum2 = teams.team2.reduce((s, p) => s + p.rating, 0);
-      const diff = Math.abs(sum1 - sum2);
+      const totalDiff = Math.abs(sum1 - sum2);
+
+      // ボットレーン差も考慮
+      const team1Bot = teams.team1.filter(
+        (p) => p.assignedRole === "ADC" || p.assignedRole === "SUPPORT"
+      );
+      const team2Bot = teams.team2.filter(
+        (p) => p.assignedRole === "ADC" || p.assignedRole === "SUPPORT"
+      );
+      const team1BotRating = team1Bot.reduce((s, p) => s + p.rating, 0);
+      const team2BotRating = team2Bot.reduce((s, p) => s + p.rating, 0);
+      const botDiff = Math.abs(team1BotRating - team2BotRating);
+
+      const score = totalDiff + botDiff * 1.5;
 
       // 👇 前回のチームと比較して変更があるかチェック
-      if (previousBlueTeamIds) {
+      let hasSignificantChange = true;
+      if (previousBlueTeamIds && previousBlueTeamRoles) {
         const currentTeam1Ids = new Set(teams.team1.map((p) => p.id));
 
         // 完全に同じチーム構成をスキップ
@@ -662,7 +715,19 @@ export default function LoLTeamMaker(): JSX.Element {
           continue;
         }
 
-        // 👇 少なくとも2人以上の変更があるチームを優先
+        // ロール割り当てが同じプレイヤーが4人以上いる場合はスキップ
+        let sameRoleCount = 0;
+        for (const player of teams.team1) {
+          const prevRole = previousBlueTeamRoles.get(player.id);
+          if (prevRole && prevRole === player.assignedRole) {
+            sameRoleCount++;
+          }
+        }
+        if (sameRoleCount >= 4) {
+          continue;
+        }
+
+        // 少なくとも2人以上の変更がある場合のみ採用
         const changedPlayers = [...currentTeam1Ids].filter(
           (id) => !previousBlueTeamIds.has(id)
         ).length;
@@ -671,14 +736,18 @@ export default function LoLTeamMaker(): JSX.Element {
         }
       }
 
-      // レーティング差が最小のチームを保存
-      if (diff < bestDiff) {
-        bestDiff = diff;
+      // スコアが最小のチームを保存
+      if (score < bestScore) {
+        bestScore = score;
         bestTeams = teams;
       }
 
       // 十分に良いバランスが見つかったら早期終了
-      if (diff <= 50 && (!previousBlueTeamIds || bestTeams)) {
+      if (
+        totalDiff <= 50 &&
+        botDiff <= 100 &&
+        (!previousBlueTeamIds || bestTeams)
+      ) {
         break;
       }
     }
@@ -693,18 +762,15 @@ export default function LoLTeamMaker(): JSX.Element {
       return;
     }
 
-    const team1WithRoles = assignRoles(bestTeams.team1);
-    const team2WithRoles = assignRoles(bestTeams.team2);
-
-    const avgRating1 = team1WithRoles.reduce((s, p) => s + p.rating, 0) / 5;
-    const avgRating2 = team2WithRoles.reduce((s, p) => s + p.rating, 0) / 5;
+    const avgRating1 = bestTeams.team1.reduce((s, p) => s + p.rating, 0) / 5;
+    const avgRating2 = bestTeams.team2.reduce((s, p) => s + p.rating, 0) / 5;
 
     const avgTier1 = ratingToTier(Math.round(avgRating1));
     const avgTier2 = ratingToTier(Math.round(avgRating2));
 
     setResult({
-      blueTeam: team1WithRoles,
-      redTeam: team2WithRoles,
+      blueTeam: bestTeams.team1,
+      redTeam: bestTeams.team2,
       avgRating1,
       avgRating2,
       avgTier1,
@@ -1314,10 +1380,10 @@ export default function LoLTeamMaker(): JSX.Element {
               <div>
                 <label className="form-label">
                   サモナー名#タグ
-                  (複数行で一括追加可能です。カスタムロビーメッセージを張り付けて追加することできます)
+                  (複数行で一括追加可能です。カスタムロビーチャットを張り付けて追加することできます)
                 </label>
                 <textarea
-                  placeholder="例:&#10;Player1#JP1がロビーに参加しました&#10;Player2#JP1がロビーに参加しました&#10;Player3#JP1がロビーに参加しました"
+                  placeholder="例:&#10;Player1#JP1がロビーに参加しました。&#10;Player2#JP1がロビーに参加しました。&#10;Player3#JP1がロビーに参加しました。"
                   value={currentInput}
                   onChange={(e) => setCurrentInput(e.target.value)}
                   rows={5}
@@ -1817,8 +1883,7 @@ export default function LoLTeamMaker(): JSX.Element {
                               display: "inline-block",
                               marginLeft: "0.25rem",
                             }}
-                          >
-                          </span>
+                          ></span>
                         </button>
                       </td>
                       <td className="button-area-cell">
