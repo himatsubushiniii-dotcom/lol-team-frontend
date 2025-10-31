@@ -12,7 +12,7 @@ export default function TopPage(): JSX.Element {
         "League of Legendsのカスタムゲーム用チーム分けツール。ランク情報を自動取得し、公平なチーム編成を実現します。",
       icon: Users,
       color: "from-blue-500 to-purple-600",
-      path: "/loLautoBalance",
+      path: "/lolAutoBalance",
       available: true,
     },
     {
