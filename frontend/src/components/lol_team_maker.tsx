@@ -567,7 +567,7 @@ export default function LoLTeamMaker(): JSX.Element {
         .replace(/\u2066/g, "") // ⁦を削除
         .replace(/\u2069/g, "") // ⁩を削除
         .replace(/\s+/g, "") // 全ての空白（半角・全角）を削除
-        .replace(/がロビーに参加しました。$/g, ""); // 語尾の「がロビーに参加しました。」を削除
+        .replace(/がロビーに参加しました。?$/g, ""); // 語尾の「がロビーに参加しました。」を削除
 
       if (!trimmedLine.includes("#")) {
         failedList.push({
