@@ -3,7 +3,7 @@ import { Users, Trash2, Shuffle, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas";
 
 // ロールの定義
-type Role = "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT";
+type Role = "TOP" | "JUG" | "MID" | "ADC" | "SUP";
 
 interface Region {
   code: string;
@@ -22,6 +22,7 @@ interface Player {
   profileIcon: number;
   preferredRoles: Role[];
   assignedRole?: Role;
+  strictRoleMatch: boolean;
 }
 
 interface RankData {
@@ -47,7 +48,7 @@ interface AddResult {
   failed: { input: string; error: string }[];
 }
 
-const ROLES: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
+const ROLES: Role[] = ["TOP", "JUG", "MID", "ADC", "SUP"];
 
 const REGIONS: Region[] = [
   { code: "jp1", name: "日本", continent: "asia" },
@@ -114,7 +115,7 @@ const RoleIcon: React.FC<{ role: Role; size?: number }> = ({
         </g>
       </svg>
     ),
-    JUNGLE: (
+    JUG: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <path
           fill="currentColor"
@@ -143,7 +144,7 @@ const RoleIcon: React.FC<{ role: Role; size?: number }> = ({
         </g>
       </svg>
     ),
-    SUPPORT: (
+    SUP: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <path
           fill="currentColor"
@@ -270,7 +271,7 @@ const fetchRankFromAPI = async (
 const divideTeams = (
   players: Player[],
   previousTeam1: Player[] | null = null
-): { team1: Player[]; team2: Player[] } | null => {
+): { team1: Player[]; team2: Player[] } | { error: string } | null => {
   let bestScore = Infinity;
   let bestTeams = null;
   const previousTeam1Ids = previousTeam1
@@ -278,10 +279,17 @@ const divideTeams = (
     : null;
 
   const n = players.length;
-  const maxAttempts = 5000; // 試行回数を増やす
+  const maxAttempts = 5000;
   let attempts = 0;
 
-  // ランダムな順序も試すために配列をシャッフル
+  // 希望ロール絶対条件のプレイヤーを抽出
+  const strictPlayers = players.filter((p) => p.strictRoleMatch);
+  const flexiblePlayers = players.filter((p) => !p.strictRoleMatch);
+
+  console.log(
+    `厳格マッチ: ${strictPlayers.length}人, 柔軟: ${flexiblePlayers.length}人`
+  );
+
   const shuffledPlayers = [...players];
   for (let i = shuffledPlayers.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -303,7 +311,6 @@ const divideTeams = (
       else team2.push(shuffledPlayers[i]);
     }
 
-    // 前回のチーム1と同じ構成をスキップ
     if (previousTeam1Ids) {
       const team1IDs = team1.map((p) => p.id).sort();
       const prevTeam1IDs = previousTeam1
@@ -313,37 +320,45 @@ const divideTeams = (
         continue;
       }
 
-      // チーム2が前回のチーム1と同じ(入れ替わっただけ)もスキップ
       const team2IDs = team2.map((p) => p.id).sort();
       if (JSON.stringify(team2IDs) === JSON.stringify(prevTeam1IDs)) {
         continue;
       }
     }
 
-    // ロール割り当てを試す
-    const team1WithRoles = assignRoles(team1);
-    const team2WithRoles = assignRoles(team2);
+    // ロール割り当てを試す（希望ロール優先モード対応）
+    const team1WithRoles = assignRolesWithStrictMode(team1);
+    const team2WithRoles = assignRolesWithStrictMode(team2);
 
-    // 総合レーティング差
+    // 厳格マッチのプレイヤーが希望ロールに割り当てられているかチェック
+    const team1Valid = team1WithRoles.every(
+      (p) => !p.strictRoleMatch || p.preferredRoles.includes(p.assignedRole!)
+    );
+    const team2Valid = team2WithRoles.every(
+      (p) => !p.strictRoleMatch || p.preferredRoles.includes(p.assignedRole!)
+    );
+
+    if (!team1Valid || !team2Valid) {
+      continue; // 厳格条件を満たさない場合はスキップ
+    }
+
     const sum1 = team1WithRoles.reduce((s, p) => s + p.rating, 0);
     const sum2 = team2WithRoles.reduce((s, p) => s + p.rating, 0);
     const totalDiff = Math.abs(sum1 - sum2);
 
-    // ボットレーン(ADC + SUPPORT)のレーティング差を計算
     const team1Bot = team1WithRoles.filter(
-      (p) => p.assignedRole === "ADC" || p.assignedRole === "SUPPORT"
+      (p) => p.assignedRole === "ADC" || p.assignedRole === "SUP"
     );
     const team2Bot = team2WithRoles.filter(
-      (p) => p.assignedRole === "ADC" || p.assignedRole === "SUPPORT"
+      (p) => p.assignedRole === "ADC" || p.assignedRole === "SUP"
     );
 
     const team1BotRating = team1Bot.reduce((s, p) => s + p.rating, 0);
     const team2BotRating = team2Bot.reduce((s, p) => s + p.rating, 0);
     const botDiff = Math.abs(team1BotRating - team2BotRating);
 
-    // 各ロール(TOP, JUNGLE, MID)のレーティング差
     const roleDiffs: number[] = [];
-    ["TOP", "JUNGLE", "MID"].forEach((role) => {
+    ["TOP", "JUG", "MID"].forEach((role) => {
       const p1 = team1WithRoles.find((p) => p.assignedRole === role);
       const p2 = team2WithRoles.find((p) => p.assignedRole === role);
       if (p1 && p2) {
@@ -352,7 +367,6 @@ const divideTeams = (
     });
     const maxRoleDiff = Math.max(...roleDiffs);
 
-    // スコア計算: 総合差 + ボットレーン差(重み付け) + 最大ロール差
     const score = totalDiff + botDiff * 1.5 + maxRoleDiff * 0.5;
 
     if (score < bestScore) {
@@ -361,7 +375,104 @@ const divideTeams = (
     }
   }
 
+  // bestTeamsがnullの場合、どのロールが不足しているか確認
+  if (!bestTeams) {
+    const allRoles: Role[] = ["TOP", "JUG", "MID", "ADC", "SUP"];
+    const strictPlayersByRole = new Map<Role, Player[]>();
+
+    // 厳格マッチのプレイヤーをロール別に分類
+    strictPlayers.forEach((player) => {
+      player.preferredRoles.forEach((role) => {
+        if (!strictPlayersByRole.has(role)) {
+          strictPlayersByRole.set(role, []);
+        }
+        strictPlayersByRole.get(role)!.push(player);
+      });
+    });
+
+    // 不足しているロールを特定
+    const insufficientRoles: Role[] = [];
+    allRoles.forEach((role) => {
+      const playersForRole = strictPlayersByRole.get(role) || [];
+      // 各ロールに最低2人必要（両チームに1人ずつ）
+      if (playersForRole.length < 2) {
+        insufficientRoles.push(role);
+      }
+    });
+
+    if (insufficientRoles.length > 0) {
+      return {
+        error: `${insufficientRoles.join(
+          ", ")}のロールが足りません。\n「他ロール拒否」の選択を外すか、${insufficientRoles.join(
+          ", ")}を選択してください。`,
+      };
+    }
+  }
+
   return bestTeams;
+};
+// 希望ロール優先モード対応のロール割り当て関数
+const assignRolesWithStrictMode = (team: Player[]): Player[] => {
+  const roleOrder: Role[] = ["TOP", "JUG", "MID", "ADC", "SUP"];
+  const availableRoles: Role[] = [...roleOrder];
+  const assignments: Player[] = [];
+
+  // 厳格マッチのプレイヤーを優先的に処理
+  const strictPlayers = team.filter((p) => p.strictRoleMatch);
+  const flexiblePlayers = team.filter((p) => !p.strictRoleMatch);
+
+  // 厳格マッチのプレイヤーを希望ロールの少ない順にソート
+  const sortedStrict = [...strictPlayers].sort(
+    (a, b) => a.preferredRoles.length - b.preferredRoles.length
+  );
+
+  // 厳格マッチのプレイヤーを先に割り当て
+  sortedStrict.forEach((player) => {
+    const possibleRoles = availableRoles.filter((r) =>
+      player.preferredRoles.includes(r)
+    );
+
+    if (possibleRoles.length > 0) {
+      const assignedRole = possibleRoles[0];
+      assignments.push({ ...player, assignedRole });
+      const index = availableRoles.indexOf(assignedRole);
+      if (index > -1) {
+        availableRoles.splice(index, 1);
+      }
+    } else {
+      // 希望ロールが全て埋まっている場合でも割り当て（エラー回避）
+      const assignedRole = availableRoles[0] || roleOrder[0];
+      assignments.push({ ...player, assignedRole });
+      const index = availableRoles.indexOf(assignedRole);
+      if (index > -1) {
+        availableRoles.splice(index, 1);
+      }
+    }
+  });
+
+  // 柔軟なプレイヤーを希望ロールの少ない順にソート
+  const sortedFlexible = [...flexiblePlayers].sort(
+    (a, b) => a.preferredRoles.length - b.preferredRoles.length
+  );
+
+  // 柔軟なプレイヤーを残りのロールに割り当て
+  sortedFlexible.forEach((player) => {
+    const possibleRoles = availableRoles.filter((r) =>
+      player.preferredRoles.includes(r)
+    );
+    const assignedRole: Role =
+      possibleRoles.length > 0 ? possibleRoles[0] : availableRoles[0];
+    assignments.push({ ...player, assignedRole });
+    const index = availableRoles.indexOf(assignedRole);
+    if (index > -1) {
+      availableRoles.splice(index, 1);
+    }
+  });
+
+  return assignments.sort(
+    (a, b) =>
+      roleOrder.indexOf(a.assignedRole!) - roleOrder.indexOf(b.assignedRole!)
+  );
 };
 
 const countBits = (n: number): number => {
@@ -375,7 +486,7 @@ const countBits = (n: number): number => {
 
 // ロール配分
 const assignRoles = (team: Player[]): Player[] => {
-  const roleOrder: Role[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
+  const roleOrder: Role[] = ["TOP", "JUG", "MID", "ADC", "SUP"];
   const availableRoles: Role[] = [...roleOrder];
   const assignments: Player[] = [];
 
@@ -424,7 +535,13 @@ export default function LoLTeamMaker(): JSX.Element {
     const savedPlayers = localStorage.getItem("lol_team_players");
     if (savedPlayers) {
       try {
-        setPlayers(JSON.parse(savedPlayers));
+        const parsed = JSON.parse(savedPlayers);
+        // strictRoleMatchフィールドが存在しない古いデータの場合は追加
+        const updatedPlayers = parsed.map((p: Player) => ({
+          ...p,
+          strictRoleMatch: p.strictRoleMatch ?? false,
+        }));
+        setPlayers(updatedPlayers);
       } catch (e) {
         console.error("Failed to load saved players:", e);
       }
@@ -476,7 +593,21 @@ export default function LoLTeamMaker(): JSX.Element {
     );
     setResult(null);
   };
-
+  // 希望ロール絶対条件の切り替え
+  const toggleStrictRoleMatch = (playerId: number): void => {
+    setPlayers(
+      players.map((player) => {
+        if (player.id === playerId) {
+          return {
+            ...player,
+            strictRoleMatch: !player.strictRoleMatch,
+          };
+        }
+        return player;
+      })
+    );
+    setResult(null);
+  };
   // プレイヤーのロールを切り替える関数
   const togglePlayerRole = (playerId: number, role: Role): void => {
     setPlayers(
@@ -607,6 +738,7 @@ export default function LoLTeamMaker(): JSX.Element {
           summonerName,
           tag,
           preferredRoles: [...ROLES], // デフォルトで全ロール選択
+          strictRoleMatch: false,
           ...rankData,
         };
 
@@ -682,16 +814,22 @@ export default function LoLTeamMaker(): JSX.Element {
 
       if (!teams) continue;
 
+      // エラーメッセージがある場合は表示して終了
+      if ("error" in teams) {
+        alert(teams.error);
+        return;
+      }
+
       const sum1 = teams.team1.reduce((s, p) => s + p.rating, 0);
       const sum2 = teams.team2.reduce((s, p) => s + p.rating, 0);
       const totalDiff = Math.abs(sum1 - sum2);
 
       // ボットレーン差も考慮
       const team1Bot = teams.team1.filter(
-        (p) => p.assignedRole === "ADC" || p.assignedRole === "SUPPORT"
+        (p) => p.assignedRole === "ADC" || p.assignedRole === "SUP"
       );
       const team2Bot = teams.team2.filter(
-        (p) => p.assignedRole === "ADC" || p.assignedRole === "SUPPORT"
+        (p) => p.assignedRole === "ADC" || p.assignedRole === "SUP"
       );
       const team1BotRating = team1Bot.reduce((s, p) => s + p.rating, 0);
       const team2BotRating = team2Bot.reduce((s, p) => s + p.rating, 0);
@@ -754,12 +892,19 @@ export default function LoLTeamMaker(): JSX.Element {
 
     if (!bestTeams) {
       // フォールバック: 前回のチーム情報を無視して再試行
-      bestTeams = divideTeams(players, null);
-    }
+      const fallbackTeams = divideTeams(players, null);
 
-    if (!bestTeams) {
-      alert("チーム分けに失敗しました");
-      return;
+      if (!fallbackTeams) {
+        alert("チーム分けに失敗しました");
+        return;
+      }
+
+      if ("error" in fallbackTeams) {
+        alert(fallbackTeams.error);
+        return;
+      }
+
+      bestTeams = fallbackTeams;
     }
 
     const avgRating1 = bestTeams.team1.reduce((s, p) => s + p.rating, 0) / 5;
@@ -1101,7 +1246,7 @@ export default function LoLTeamMaker(): JSX.Element {
               row.style.lineHeight = "1.2";
               row.style.height = "auto";
             });
-            // ロール名 (TOP, JUNGLE, MID, ADC, SUPPORT)
+            // ロール名 (TOP, JUG, MID, ADC, SUP)
             const roleNames = clonedElement.querySelectorAll(
               ".blue-assigned-role, .red-assigned-role"
             );
@@ -1528,9 +1673,18 @@ export default function LoLTeamMaker(): JSX.Element {
 
             {/* 説明文を追加 */}
             <div className="rounded-lg p-3 mb-4 border info-box">
+              <p className="text-blue-200 text-sm">💡使い方</p>
               <p className="text-blue-200 text-sm">
-                💡 初期表示は現在ランクで過去ランクなどに変更可能です。
-                各ロールボタン押下することで希望ロールを選択することできます。
+                &nbsp;&nbsp;&nbsp;&nbsp;●
+                過去最高ランクと差がある場合、選択されてる「ランク」を調整してください。
+              </p>
+              <p className="text-blue-200 text-sm">
+                &nbsp;&nbsp;&nbsp;&nbsp;●
+                「各ロール」ボタンを選択すると希望ロールを優先しつつ、必要に応じて他ロールにも割り当てます。
+              </p>
+              <p className="text-blue-200 text-sm">
+                &nbsp;&nbsp;&nbsp;&nbsp;●
+                「他ロール拒否」を選択すると、選択したロール以外には割り当てられなくなります。
               </p>
             </div>
 
@@ -1598,6 +1752,29 @@ export default function LoLTeamMaker(): JSX.Element {
                           </button>
                         );
                       })}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label
+                        className="flex items-center gap-1 cursor-pointer"
+                        style={{
+                          fontSize: "0.75rem",
+                          color: player.strictRoleMatch ? "#0A84FF" : "#999",
+                          userSelect: "none",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={player.strictRoleMatch}
+                          onChange={() => toggleStrictRoleMatch(player.id)}
+                          style={{
+                            width: "14px",
+                            height: "14px",
+                            cursor: "pointer",
+                            accentColor: "#0A84FF",
+                          }}
+                        />
+                        <span>他ロール拒否</span>
+                      </label>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
