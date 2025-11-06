@@ -612,7 +612,7 @@ body {
 .summoner-name-registration {
   color: white;
   font-weight: 600;
-  width: 150px;
+  width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
