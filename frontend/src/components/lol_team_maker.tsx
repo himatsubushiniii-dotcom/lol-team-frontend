@@ -299,8 +299,11 @@ const divideTeams = (
     ];
   }
 
+  // チームの人数を計算（総人数の半分）
+  const teamSize = Math.floor(n / 2);
+
   for (let mask = 0; mask < 1 << n && attempts < maxAttempts; mask++) {
-    if (countBits(mask) !== 5) continue;
+    if (countBits(mask) !== teamSize) continue;
     attempts++;
 
     const team1 = [];
@@ -403,8 +406,10 @@ const divideTeams = (
     if (insufficientRoles.length > 0) {
       return {
         error: `${insufficientRoles.join(
-          ", ")}のロールが足りません。\n「他ロール拒否」の選択を外すか、${insufficientRoles.join(
-          ", ")}を選択してください。`,
+          ", "
+        )}のロールが足りません。\n「他ロール拒否」の選択を外すか、${insufficientRoles.join(
+          ", "
+        )}を選択してください。`,
       };
     }
   }
@@ -529,6 +534,9 @@ export default function LoLTeamMaker(): JSX.Element {
   const [currentProcessing, setCurrentProcessing] = useState<string>("");
   const [processedCount, setProcessedCount] = useState<number>(0);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [gameMode, setGameMode] = useState<"summoners-rift" | "aram">(
+    "summoners-rift"
+  );
 
   // ローカルストレージからプレイヤーを読み込む（初回のみ）
   useEffect(() => {
@@ -556,6 +564,17 @@ export default function LoLTeamMaker(): JSX.Element {
       localStorage.removeItem("lol_team_players");
     }
   }, [players]);
+
+  useEffect(() => {
+    if (result) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [result]);
 
   // ソート済みプレイヤーリストを取得
   const sortedPlayers = useMemo(() => {
@@ -695,9 +714,9 @@ export default function LoLTeamMaker(): JSX.Element {
       // 不要な文字を削除してクリーンアップ
       let trimmedLine = line
         .trim()
-        .replace(/\u2066/g, "") // ⁦を削除
-        .replace(/\u2069/g, "") // ⁩を削除
-        .replace(/\s+/g, "") // 全ての空白（半角・全角）を削除
+        .replace(/\u2066/g, "") // ⦆を削除
+        .replace(/\u2069/g, "") // ⩩を削除
+        .replace(/\s+(?=#)/g, "") // #の前の空白のみを削除
         .replace(/がロビーに参加しました。?$/g, ""); // 語尾の「がロビーに参加しました。」を削除
 
       if (!trimmedLine.includes("#")) {
@@ -789,8 +808,13 @@ export default function LoLTeamMaker(): JSX.Element {
   };
 
   const createTeams = (): void => {
-    if (players.length !== 10) {
-      alert("10人揃ってから実行してください");
+    const requiredPlayers = gameMode === "summoners-rift" ? 10 : 2;
+    if (players.length < requiredPlayers) {
+      alert(
+        gameMode === "summoners-rift"
+          ? "10人揃ってから実行してください"
+          : "最低2人必要です"
+      );
       return;
     }
 
@@ -1502,31 +1526,66 @@ export default function LoLTeamMaker(): JSX.Element {
           </p>
           <AdBanner slot="1234567890" />
         </div>
+        {/* ========== カード1: 基本設定 ========== */}
+        <div className="card-base mb-4 max-w-4xl mx-auto">
+          <h2 className="section-title">■ 基本設定</h2>
+
+          <div className="mb-4">
+            <label className="form-label">リージョン選択</label>
+            <select
+              value={selectedRegion}
+              onChange={(e) => setSelectedRegion(e.target.value)}
+              className="rank-select"
+              style={{ width: "100%" }}
+            >
+              {REGIONS.map((region) => (
+                <option key={region.code} value={region.code}>
+                  {region.name} ({region.code.toUpperCase()})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-0">
+            <label className="form-label">ゲームモード</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setGameMode("summoners-rift")}
+                className={`px-4 py-2 rounded transition-all ${
+                  gameMode === "summoners-rift"
+                    ? "sort-button-active"
+                    : "sort-button-inactive"
+                }`}
+              >
+                サモナーズリフト (5v5)
+              </button>
+              <button
+                onClick={() => setGameMode("aram")}
+                className={`px-4 py-2 rounded transition-all ${
+                  gameMode === "aram"
+                    ? "sort-button-active"
+                    : "sort-button-inactive"
+                }`}
+              >
+                ランダムミッド (ARAM)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ========== カード2: プレイヤー追加 ========== */}
         {players.length < 10 && (
           <div className="card-base mb-4 max-w-4xl mx-auto">
-            <div className="mb-4">
-              <label className="form-label">リージョン選択</label>
-              <select
-                value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
-                className="rank-select"
-                style={{ width: "100%" }}
-              >
-                {REGIONS.map((region) => (
-                  <option key={region.code} value={region.code}>
-                    {region.name} ({region.code.toUpperCase()})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <h2 className="section-title"> </h2>
+            <h2 className="section-title">■ プレイヤー追加</h2>
 
             <div className="space-y-4">
               <div>
-                <label className="form-label">
-                  サモナー名#タグ
-                  (複数行で一括追加可能です。カスタムロビーチャットを張り付けて追加することできます)
-                </label>
+                <label className="form-label">サモナー名#タグ</label>
+                <div className="rounded-lg p-3 mb-4 border info-box">
+                  <p className="text-blue-200 text-sm">
+                    💡複数行で一括追加可能です。カスタムロビーチャットを貼り付けて追加することできます。
+                  </p>
+                </div>
                 <textarea
                   placeholder="例:&#10;Player1#JP1がロビーに参加しました。&#10;Player2#JP1がロビーに参加しました。&#10;Player3#JP1がロビーに参加しました。"
                   value={currentInput}
@@ -1572,6 +1631,7 @@ export default function LoLTeamMaker(): JSX.Element {
                   )}
                 </div>
               )}
+
               {loading && currentProcessing && (
                 <div className="rounded-lg p-3 border-2 border-blue-500/50 message-processing">
                   <div className="text-blue-300 text-sm mb-2">
@@ -1590,6 +1650,7 @@ export default function LoLTeamMaker(): JSX.Element {
                   </div>
                 </div>
               )}
+
               <button
                 onClick={addPlayer}
                 disabled={loading || !currentInput.trim()}
@@ -1623,7 +1684,7 @@ export default function LoLTeamMaker(): JSX.Element {
                 <tr>
                   <td style={{ textAlign: "left", verticalAlign: "middle" }}>
                     <h2 className="section-title">
-                      登録プレイヤー ({players.length}/10)
+                      ■ 登録プレイヤー ({players.length}/10)
                     </h2>
                   </td>
                   <td
@@ -1678,14 +1739,18 @@ export default function LoLTeamMaker(): JSX.Element {
                 &nbsp;&nbsp;&nbsp;&nbsp;●
                 過去最高ランクと差がある場合、選択されてる「ランク」を調整してください。
               </p>
-              <p className="text-blue-200 text-sm">
-                &nbsp;&nbsp;&nbsp;&nbsp;●
-                「各ロール」ボタンを選択すると希望ロールを優先しつつ、必要に応じて他ロールにも割り当てます。
-              </p>
-              <p className="text-blue-200 text-sm">
-                &nbsp;&nbsp;&nbsp;&nbsp;●
-                「他ロール拒否」を選択すると、選択したロール以外には割り当てられなくなります。
-              </p>
+              {gameMode === "summoners-rift" && (
+                <>
+                  <p className="text-blue-200 text-sm">
+                    &nbsp;&nbsp;&nbsp;&nbsp;●
+                    「各ロール」ボタンを選択すると希望ロールを優先しつつ、必要に応じて他ロールにも割り当てます。
+                  </p>
+                  <p className="text-blue-200 text-sm">
+                    &nbsp;&nbsp;&nbsp;&nbsp;●
+                    「他ロール拒否」を選択すると、選択したロール以外には割り当てられなくなります。
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -1734,62 +1799,72 @@ export default function LoLTeamMaker(): JSX.Element {
                         </option>
                       ))}
                     </select>
-                    <div className="flex gap-1">
-                      {ROLES.map((role) => {
-                        const isSelected = player.preferredRoles.includes(role);
-                        return (
+                    {/* ロール選択ボタン部分を条件付きレンダリング */}
+                    {gameMode === "summoners-rift" && (
+                      <>
+                        <div className="flex gap-1">
+                          {ROLES.map((role) => {
+                            const isSelected =
+                              player.preferredRoles.includes(role);
+                            return (
+                              <button
+                                key={role}
+                                onClick={() =>
+                                  togglePlayerRole(player.id, role)
+                                }
+                                className={
+                                  isSelected
+                                    ? "role-button-registration-selected"
+                                    : "role-button-registration-unselected"
+                                }
+                              >
+                                <RoleIcon role={role} size={12} />
+                                {role}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label
+                            className="flex items-center gap-1 cursor-pointer"
+                            style={{
+                              fontSize: "0.75rem",
+                              color: player.strictRoleMatch
+                                ? "#0A84FF"
+                                : "#999",
+                              userSelect: "none",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={player.strictRoleMatch}
+                              onChange={() => toggleStrictRoleMatch(player.id)}
+                              style={{
+                                width: "14px",
+                                height: "14px",
+                                cursor: "pointer",
+                                accentColor: "#0A84FF",
+                              }}
+                            />
+                            <span>他ロール拒否</span>
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <button
-                            key={role}
-                            onClick={() => togglePlayerRole(player.id, role)}
+                            onClick={() => toggleAllRoles(player.id)}
                             className={
-                              isSelected
-                                ? "role-button-registration-selected"
-                                : "role-button-registration-unselected"
+                              player.preferredRoles.length === ROLES.length
+                                ? "toggle-all-button-deselect"
+                                : "toggle-all-button-select"
                             }
                           >
-                            <RoleIcon role={role} size={12} />
-                            {role}
+                            {player.preferredRoles.length === ROLES.length
+                              ? "全解除"
+                              : "全選択"}
                           </button>
-                        );
-                      })}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label
-                        className="flex items-center gap-1 cursor-pointer"
-                        style={{
-                          fontSize: "0.75rem",
-                          color: player.strictRoleMatch ? "#0A84FF" : "#999",
-                          userSelect: "none",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={player.strictRoleMatch}
-                          onChange={() => toggleStrictRoleMatch(player.id)}
-                          style={{
-                            width: "14px",
-                            height: "14px",
-                            cursor: "pointer",
-                            accentColor: "#0A84FF",
-                          }}
-                        />
-                        <span>他ロール拒否</span>
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => toggleAllRoles(player.id)}
-                        className={
-                          player.preferredRoles.length === ROLES.length
-                            ? "toggle-all-button-deselect"
-                            : "toggle-all-button-select"
-                        }
-                      >
-                        {player.preferredRoles.length === ROLES.length
-                          ? "全解除"
-                          : "全選択"}
-                      </button>
-                    </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <button
@@ -1803,28 +1878,24 @@ export default function LoLTeamMaker(): JSX.Element {
             </div>
             <button
               onClick={createTeams}
-              disabled={players.length !== 10}
+              disabled={
+                gameMode === "summoners-rift"
+                  ? players.length !== 10
+                  : players.length < 2
+              }
               className={`create-teams-button ${
-                players.length === 10
+                (gameMode === "summoners-rift" && players.length === 10) ||
+                (gameMode === "aram" && players.length >= 2)
                   ? "create-teams-button-enabled"
                   : "create-teams-button-disabled"
               }`}
-              style={{ textAlign: "center" }}
             >
-              <Shuffle
-                className="w-5 h-5"
-                style={{
-                  display: "inline-block",
-                  verticalAlign: "middle",
-                  marginRight: "0.5rem",
-                }}
-              />
-              <span
-                style={{ display: "inline-block", verticalAlign: "middle" }}
-              >
-                チーム分け実行{" "}
-                {players.length !== 10 && `(${10 - players.length}人不足)`}
-              </span>
+              <Shuffle className="w-5 h-5" />
+              チーム分け実行{" "}
+              {gameMode === "summoners-rift" &&
+                players.length !== 10 &&
+                `(${10 - players.length}人不足)`}
+              {gameMode === "aram" && players.length < 2 && `(最低2人必要)`}
             </button>
             <AdBanner slot="9876543210" format="horizontal" />
           </div>
@@ -1843,7 +1914,7 @@ export default function LoLTeamMaker(): JSX.Element {
                 <tbody>
                   <tr>
                     <td style={{ textAlign: "left", verticalAlign: "middle" }}>
-                      <h2 className="result-title">チーム分け結果</h2>
+                      <h2 className="result-title">■ チーム分け結果</h2>
                     </td>
                     <td
                       style={{
@@ -1879,14 +1950,15 @@ export default function LoLTeamMaker(): JSX.Element {
                         <table className="player-card-inner-table">
                           <tbody>
                             <tr className="player-card-inner-row">
-                              {/* ロールアイコン */}
-                              <td className="player-card-cell-role-icon blue-role-icon">
-                                <RoleIcon
-                                  role={player.assignedRole!}
-                                  size={20}
-                                />
-                              </td>
-
+                              {/* ロールアイコンセル */}
+                              {gameMode === "summoners-rift" && (
+                                <td className="player-card-cell-role-icon blue-role-icon">
+                                  <RoleIcon
+                                    role={player.assignedRole!}
+                                    size={20}
+                                  />
+                                </td>
+                              )}
                               {/* プロフィール画像とサモナー名 */}
                               <td className="player-card-cell-profile">
                                 <img
@@ -1909,12 +1981,13 @@ export default function LoLTeamMaker(): JSX.Element {
                               <td className="player-card-cell-info">
                                 <div>
                                   {/* 割り当てられたロール */}
-                                  <div className="role-assignment-row">
-                                    <span className="blue-assigned-role">
-                                      {player.assignedRole}
-                                    </span>
-                                  </div>
-
+                                  {gameMode === "summoners-rift" && (
+                                    <div className="role-assignment-row">
+                                      <span className="blue-assigned-role">
+                                        {player.assignedRole}
+                                      </span>
+                                    </div>
+                                  )}
                                   {/* ランク情報 */}
                                   <div className="rank-info">
                                     <div>
@@ -1923,25 +1996,28 @@ export default function LoLTeamMaker(): JSX.Element {
                                   </div>
 
                                   {/* 希望ロール一覧 */}
-                                  <div className="preferred-roles-container">
-                                    {player.preferredRoles.map((role) => (
-                                      <span
-                                        key={role}
-                                        className={`preferred-role-badge ${
-                                          role === player.assignedRole
-                                            ? "blue-preferred-role-active"
-                                            : "blue-preferred-role-inactive"
-                                        }`}
-                                      >
-                                        <span className="role-icon-container">
-                                          <RoleIcon role={role} size={12} />
+
+                                  {gameMode === "summoners-rift" && (
+                                    <div className="preferred-roles-container">
+                                      {player.preferredRoles.map((role) => (
+                                        <span
+                                          key={role}
+                                          className={`preferred-role-badge ${
+                                            role === player.assignedRole
+                                              ? "blue-preferred-role-active"
+                                              : "blue-preferred-role-inactive"
+                                          }`}
+                                        >
+                                          <span className="role-icon-container">
+                                            <RoleIcon role={role} size={12} />
+                                          </span>
+                                          <span className="role-text">
+                                            {role}
+                                          </span>
                                         </span>
-                                        <span className="role-text">
-                                          {role}
-                                        </span>
-                                      </span>
-                                    ))}
-                                  </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1968,13 +2044,15 @@ export default function LoLTeamMaker(): JSX.Element {
                           <tbody>
                             <tr className="player-card-inner-row">
                               {/* ロールアイコン */}
-                              <td className="player-card-cell-role-icon red-role-icon">
-                                <RoleIcon
-                                  role={player.assignedRole!}
-                                  size={20}
-                                />
-                              </td>
 
+                              {gameMode === "summoners-rift" && (
+                                <td className="player-card-cell-role-icon red-role-icon">
+                                  <RoleIcon
+                                    role={player.assignedRole!}
+                                    size={20}
+                                  />
+                                </td>
+                              )}
                               {/* プロフィール画像とサモナー名 */}
                               <td className="player-card-cell-profile">
                                 <img
@@ -1997,11 +2075,13 @@ export default function LoLTeamMaker(): JSX.Element {
                               <td className="player-card-cell-info">
                                 <div>
                                   {/* 割り当てられたロール */}
-                                  <div className="role-assignment-row">
-                                    <span className="red-assigned-role">
-                                      {player.assignedRole}
-                                    </span>
-                                  </div>
+                                  {gameMode === "summoners-rift" && (
+                                    <div className="role-assignment-row">
+                                      <span className="red-assigned-role">
+                                        {player.assignedRole}
+                                      </span>
+                                    </div>
+                                  )}
 
                                   {/* ランク情報 */}
                                   <div className="rank-info">
@@ -2011,25 +2091,27 @@ export default function LoLTeamMaker(): JSX.Element {
                                   </div>
 
                                   {/* 希望ロール一覧 */}
-                                  <div className="preferred-roles-container">
-                                    {player.preferredRoles.map((role) => (
-                                      <span
-                                        key={role}
-                                        className={`preferred-role-badge ${
-                                          role === player.assignedRole
-                                            ? "red-preferred-role-active"
-                                            : "red-preferred-role-inactive"
-                                        }`}
-                                      >
-                                        <span className="role-icon-container">
-                                          <RoleIcon role={role} size={12} />
+                                  {gameMode === "summoners-rift" && (
+                                    <div className="preferred-roles-container">
+                                      {player.preferredRoles.map((role) => (
+                                        <span
+                                          key={role}
+                                          className={`preferred-role-badge ${
+                                            role === player.assignedRole
+                                              ? "red-preferred-role-active"
+                                              : "red-preferred-role-inactive"
+                                          }`}
+                                        >
+                                          <span className="role-icon-container">
+                                            <RoleIcon role={role} size={12} />
+                                          </span>
+                                          <span className="role-text">
+                                            {role}
+                                          </span>
                                         </span>
-                                        <span className="role-text">
-                                          {role}
-                                        </span>
-                                      </span>
-                                    ))}
-                                  </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                             </tr>
