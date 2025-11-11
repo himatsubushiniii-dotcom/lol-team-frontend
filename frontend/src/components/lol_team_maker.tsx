@@ -175,7 +175,7 @@ const AdBanner: React.FC<{ slot: string; format?: string }> = ({
       <ins
         className="adsbygoogle"
         style={{ display: "block" }}
-        data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" // 実際のAdSense IDに変更
+        data-ad-client="ca-pub-3227690111627241" // 実際のAdSense IDに変更
         data-ad-slot={slot}
         data-ad-format={format}
         data-full-width-responsive="true"
@@ -681,7 +681,10 @@ export default function LoLTeamMaker(): JSX.Element {
     }
 
     // 改行で分割してプレイヤーリストを作成
-    const inputLines = currentInput.split("\n").filter((line) => line.trim());
+    const inputLines = currentInput
+      .split("\n")
+      .filter((line) => line.trim())
+      .filter((line) => !line.includes("がロビーから退出しました"));
 
     if (inputLines.length === 0) {
       return;
@@ -1584,6 +1587,14 @@ export default function LoLTeamMaker(): JSX.Element {
                 <div className="rounded-lg p-3 mb-4 border info-box">
                   <p className="text-blue-200 text-sm">
                     💡複数行で一括追加可能です。カスタムロビーチャットを貼り付けて追加することできます。
+                  </p>
+                  <p className="text-blue-200 text-sm">
+                    &nbsp;&nbsp;&nbsp;&nbsp;※「〇〇がロビーに参加しました。」→
+                    追加されます
+                  </p>
+                  <p className="text-blue-200 text-sm">
+                    &nbsp;&nbsp;&nbsp;&nbsp;※「〇〇がロビーから退出しました。」→
+                    追加されません
                   </p>
                 </div>
                 <textarea
