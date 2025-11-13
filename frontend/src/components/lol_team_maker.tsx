@@ -686,15 +686,44 @@ export default function LoLTeamMaker(): JSX.Element {
       .filter((line) => line.trim())
       .filter((line) => !line.includes("がロビーから退出しました"));
 
-    if (inputLines.length === 0) {
+        // 各プレイヤーの最後の行動のみを残す
+  const playerLastAction = new Map<string, string>();
+  
+  currentInput.split("\n").forEach((line) => {
+    if (!line.trim()) return;
+    
+    const cleanedLine = line
+      .trim()
+      .replace(/\u2066/g, "")
+      .replace(/\u2069/g, "")
+      .replace(/\s+(?=#)/g, "")
+      .replace(/がロビーに参加しました。?$/g, "")
+      .replace(/がロビーから退出しました。?$/g, "");
+    
+    if (cleanedLine.includes("#")) {
+      // このプレイヤーの行動を記録（後から出てきた行で上書き）
+      playerLastAction.set(cleanedLine, line);
+    }
+  });
+  
+  // 最後の行動が「退出」のプレイヤーを除外
+  const finalInputLines: string[] = [];
+  playerLastAction.forEach((lastLine, playerKey) => {
+    if (!lastLine.includes("がロビーから退出しました")) {
+      finalInputLines.push(lastLine);
+    }
+  });
+
+
+    if (finalInputLines .length === 0) {
       return;
     }
 
     // 10人を超える場合はチェック
-    if (players.length + inputLines.length > 10) {
+    if (players.length + finalInputLines .length > 10) {
       setAddResults({
         success: [],
-        failed: inputLines.map((line) => ({
+        failed: finalInputLines .map((line) => ({
           input: line,
           error: `登録上限です。現在${players.length}人登録済み。あと${
             10 - players.length
@@ -705,13 +734,13 @@ export default function LoLTeamMaker(): JSX.Element {
     }
 
     setLoading(true);
-    setTotalCount(inputLines.length);
+    setTotalCount(finalInputLines .length);
     setProcessedCount(0);
     const successList = [];
     const failedList = [];
 
-    for (let i = 0; i < inputLines.length; i++) {
-      const line = inputLines[i];
+    for (let i = 0; i < finalInputLines .length; i++) {
+      const line = finalInputLines [i];
       setCurrentProcessing(line);
       setProcessedCount(i + 1);
       // 不要な文字を削除してクリーンアップ
@@ -1556,7 +1585,7 @@ export default function LoLTeamMaker(): JSX.Element {
                 onClick={() => setGameMode("summoners-rift")}
                 className={`px-4 py-2 rounded transition-all ${
                   gameMode === "summoners-rift"
-                    ? "sort-button-active"
+                    ? "bg-emerald-700 text-white font-semibold"
                     : "sort-button-inactive"
                 }`}
               >
@@ -1566,7 +1595,7 @@ export default function LoLTeamMaker(): JSX.Element {
                 onClick={() => setGameMode("aram")}
                 className={`px-4 py-2 rounded transition-all ${
                   gameMode === "aram"
-                    ? "sort-button-active"
+                    ? "bg-emerald-700 text-white font-semibold"
                     : "sort-button-inactive"
                 }`}
               >
