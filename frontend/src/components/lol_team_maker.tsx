@@ -66,38 +66,38 @@ const REGIONS: Region[] = [
 
 // 全てのランクオプションを定義
 const RANK_OPTIONS = [
-  { tier: "UNRANKED", rank: "", display: "UNRANKED" },
-  { tier: "CHALLENGER", rank: "I", display: "CHALLENGER I" },
-  { tier: "GRANDMASTER", rank: "I", display: "GRANDMASTER I" },
-  { tier: "MASTER", rank: "I", display: "MASTER I" },
-  { tier: "DIAMOND", rank: "I", display: "DIAMOND I" },
-  { tier: "DIAMOND", rank: "II", display: "DIAMOND II" },
-  { tier: "DIAMOND", rank: "III", display: "DIAMOND III" },
-  { tier: "DIAMOND", rank: "IV", display: "DIAMOND IV" },
-  { tier: "EMERALD", rank: "I", display: "EMERALD I" },
-  { tier: "EMERALD", rank: "II", display: "EMERALD II" },
-  { tier: "EMERALD", rank: "III", display: "EMERALD III" },
-  { tier: "EMERALD", rank: "IV", display: "EMERALD IV" },
-  { tier: "PLATINUM", rank: "I", display: "PLATINUM I" },
-  { tier: "PLATINUM", rank: "II", display: "PLATINUM II" },
-  { tier: "PLATINUM", rank: "III", display: "PLATINUM III" },
-  { tier: "PLATINUM", rank: "IV", display: "PLATINUM IV" },
-  { tier: "GOLD", rank: "I", display: "GOLD I" },
-  { tier: "GOLD", rank: "II", display: "GOLD II" },
-  { tier: "GOLD", rank: "III", display: "GOLD III" },
-  { tier: "GOLD", rank: "IV", display: "GOLD IV" },
-  { tier: "SILVER", rank: "I", display: "SILVER I" },
-  { tier: "SILVER", rank: "II", display: "SILVER II" },
-  { tier: "SILVER", rank: "III", display: "SILVER III" },
-  { tier: "SILVER", rank: "IV", display: "SILVER IV" },
-  { tier: "BRONZE", rank: "I", display: "BRONZE I" },
-  { tier: "BRONZE", rank: "II", display: "BRONZE II" },
-  { tier: "BRONZE", rank: "III", display: "BRONZE III" },
-  { tier: "BRONZE", rank: "IV", display: "BRONZE IV" },
-  { tier: "IRON", rank: "I", display: "IRON I" },
-  { tier: "IRON", rank: "II", display: "IRON II" },
-  { tier: "IRON", rank: "III", display: "IRON III" },
-  { tier: "IRON", rank: "IV", display: "IRON IV" },
+  { tier: "UNRANKED", rank: "", display: "ランクなし" },
+  { tier: "CHALLENGER", rank: "I", display: "チャレンジャー" },
+  { tier: "GRANDMASTER", rank: "I", display: "グランドマスター" },
+  { tier: "MASTER", rank: "I", display: "マスターI" },
+  { tier: "DIAMOND", rank: "I", display: "ダイヤモンドI" },
+  { tier: "DIAMOND", rank: "II", display: "ダイヤモンドII" },
+  { tier: "DIAMOND", rank: "III", display: "ダイヤモンドIII" },
+  { tier: "DIAMOND", rank: "IV", display: "ダイヤモンドIV" },
+  { tier: "EMERALD", rank: "I", display: "エメラルドI" },
+  { tier: "EMERALD", rank: "II", display: "エメラルドII" },
+  { tier: "EMERALD", rank: "III", display: "エメラルドIII" },
+  { tier: "EMERALD", rank: "IV", display: "エメラルドIV" },
+  { tier: "PLATINUM", rank: "I", display: "プラチナI" },
+  { tier: "PLATINUM", rank: "II", display: "プラチナII" },
+  { tier: "PLATINUM", rank: "III", display: "プラチナIII" },
+  { tier: "PLATINUM", rank: "IV", display: "プラチナIV" },
+  { tier: "GOLD", rank: "I", display: "ゴールドI" },
+  { tier: "GOLD", rank: "II", display: "ゴールドII" },
+  { tier: "GOLD", rank: "III", display: "ゴールドIII" },
+  { tier: "GOLD", rank: "IV", display: "ゴールドIV" },
+  { tier: "SILVER", rank: "I", display: "シルバーI" },
+  { tier: "SILVER", rank: "II", display: "シルバーII" },
+  { tier: "SILVER", rank: "III", display: "シルバーIII" },
+  { tier: "SILVER", rank: "IV", display: "シルバーIV" },
+  { tier: "BRONZE", rank: "I", display: "ブロンズI" },
+  { tier: "BRONZE", rank: "II", display: "ブロンズII" },
+  { tier: "BRONZE", rank: "III", display: "ブロンズIII" },
+  { tier: "BRONZE", rank: "IV", display: "ブロンズIV" },
+  { tier: "IRON", rank: "I", display: "アイアンI" },
+  { tier: "IRON", rank: "II", display: "アイアンII" },
+  { tier: "IRON", rank: "III", display: "アイアンIII" },
+  { tier: "IRON", rank: "IV", display: "アイアンIV" },
 ];
 
 // ロールアイコン(SVG)
@@ -407,7 +407,7 @@ const divideTeams = (
       return {
         error: `${insufficientRoles.join(
           ", "
-        )}のロールが足りません。\n「他ロール拒否」の選択を外すか、${insufficientRoles.join(
+        )}のロールが足りません。\n「選択ロール最優先」の選択を外すか、${insufficientRoles.join(
           ", "
         )}を選択してください。`,
       };
@@ -686,44 +686,43 @@ export default function LoLTeamMaker(): JSX.Element {
       .filter((line) => line.trim())
       .filter((line) => !line.includes("がロビーから退出しました"));
 
-        // 各プレイヤーの最後の行動のみを残す
-  const playerLastAction = new Map<string, string>();
-  
-  currentInput.split("\n").forEach((line) => {
-    if (!line.trim()) return;
-    
-    const cleanedLine = line
-      .trim()
-      .replace(/\u2066/g, "")
-      .replace(/\u2069/g, "")
-      .replace(/\s+(?=#)/g, "")
-      .replace(/がロビーに参加しました。?$/g, "")
-      .replace(/がロビーから退出しました。?$/g, "");
-    
-    if (cleanedLine.includes("#")) {
-      // このプレイヤーの行動を記録（後から出てきた行で上書き）
-      playerLastAction.set(cleanedLine, line);
-    }
-  });
-  
-  // 最後の行動が「退出」のプレイヤーを除外
-  const finalInputLines: string[] = [];
-  playerLastAction.forEach((lastLine, playerKey) => {
-    if (!lastLine.includes("がロビーから退出しました")) {
-      finalInputLines.push(lastLine);
-    }
-  });
+    // 各プレイヤーの最後の行動のみを残す
+    const playerLastAction = new Map<string, string>();
 
+    currentInput.split("\n").forEach((line) => {
+      if (!line.trim()) return;
 
-    if (finalInputLines .length === 0) {
+      const cleanedLine = line
+        .trim()
+        .replace(/\u2066/g, "")
+        .replace(/\u2069/g, "")
+        .replace(/\s+(?=#)/g, "")
+        .replace(/がロビーに参加しました。?$/g, "")
+        .replace(/がロビーから退出しました。?$/g, "");
+
+      if (cleanedLine.includes("#")) {
+        // このプレイヤーの行動を記録（後から出てきた行で上書き）
+        playerLastAction.set(cleanedLine, line);
+      }
+    });
+
+    // 最後の行動が「退出」のプレイヤーを除外
+    const finalInputLines: string[] = [];
+    playerLastAction.forEach((lastLine, playerKey) => {
+      if (!lastLine.includes("がロビーから退出しました")) {
+        finalInputLines.push(lastLine);
+      }
+    });
+
+    if (finalInputLines.length === 0) {
       return;
     }
 
     // 10人を超える場合はチェック
-    if (players.length + finalInputLines .length > 10) {
+    if (players.length + finalInputLines.length > 10) {
       setAddResults({
         success: [],
-        failed: finalInputLines .map((line) => ({
+        failed: finalInputLines.map((line) => ({
           input: line,
           error: `登録上限です。現在${players.length}人登録済み。あと${
             10 - players.length
@@ -734,13 +733,13 @@ export default function LoLTeamMaker(): JSX.Element {
     }
 
     setLoading(true);
-    setTotalCount(finalInputLines .length);
+    setTotalCount(finalInputLines.length);
     setProcessedCount(0);
     const successList = [];
     const failedList = [];
 
-    for (let i = 0; i < finalInputLines .length; i++) {
-      const line = finalInputLines [i];
+    for (let i = 0; i < finalInputLines.length; i++) {
+      const line = finalInputLines[i];
       setCurrentProcessing(line);
       setProcessedCount(i + 1);
       // 不要な文字を削除してクリーンアップ
@@ -1526,7 +1525,83 @@ export default function LoLTeamMaker(): JSX.Element {
       alert("❌ スクリーンショットの生成に失敗しました");
     }
   };
+  const copyResultAsText = async (): Promise<void> => {
+    if (!result) return;
 
+    const blueTeamText = result.blueTeam
+      .map((p) => {
+        const roleText =
+          gameMode === "summoners-rift" ? `${p.assignedRole} ` : "";
+        const rankText = formatRankJapanese(p.tier, p.rank);
+        return `${roleText}${p.summonerName}#${p.tag} (${rankText})`;
+      })
+      .join("\n");
+
+    const redTeamText = result.redTeam
+      .map((p) => {
+        const roleText =
+          gameMode === "summoners-rift" ? `${p.assignedRole} ` : "";
+        const rankText = formatRankJapanese(p.tier, p.rank);
+        return `${roleText}${p.summonerName}#${p.tag} (${rankText})`;
+      })
+      .join("\n");
+
+    const avgRank1Text = formatRankJapanese(
+      result.avgTier1.tier,
+      result.avgTier1.rank
+    );
+    const avgRank2Text = formatRankJapanese(
+      result.avgTier2.tier,
+      result.avgTier2.rank
+    );
+
+    const textToCopy = `【チーム分け結果】
+
+━━━ ブルーチーム ━━━
+平均ランク: ${avgRank1Text}
+
+${blueTeamText}
+
+━━━ レッドチーム ━━━
+平均ランク: ${avgRank2Text}
+
+${redTeamText}`;
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      alert("✅ テキストをクリップボードにコピーしました!");
+    } catch (err) {
+      console.error("コピーに失敗:", err);
+      alert("❌ コピーに失敗しました");
+    }
+  };
+  const formatRankJapanese = (tier: string, rank: string): string => {
+    const tierMap: { [key: string]: string } = {
+      CHALLENGER: "チャレンジャー",
+      GRANDMASTER: "グランドマスター",
+      MASTER: "マスター",
+      DIAMOND: "ダイヤモンド",
+      EMERALD: "エメラルド",
+      PLATINUM: "プラチナ",
+      GOLD: "ゴールド",
+      SILVER: "シルバー",
+      BRONZE: "ブロンズ",
+      IRON: "アイアン",
+      UNRANKED: "ランクなし",
+    };
+
+    const rankMap: { [key: string]: string } = {
+      I: "I",
+      II: "II",
+      III: "III",
+      IV: "IV",
+    };
+
+    const tierJapanese = tierMap[tier] || tier;
+    const rankJapanese = rank ? rankMap[rank] || rank : "";
+
+    return rank ? `${tierJapanese}${rankJapanese}` : tierJapanese;
+  };
   return (
     <div className="main-container">
       <div className="max-w-6xl mx-auto">
@@ -1554,38 +1629,37 @@ export default function LoLTeamMaker(): JSX.Element {
             onClick={resetToInitialState}
             title="クリックで初期状態に戻す"
           >
-            公平なチーム分けとロール配分
+            希望ロールをもとに自動でバランス調整されたチーム分け
           </p>
           <AdBanner slot="1234567890" />
         </div>
         {/* ========== カード1: 基本設定 ========== */}
         <div className="card-base mb-4 max-w-4xl mx-auto">
-          <h2 className="section-title">■ 基本設定</h2>
-
-          <div className="mb-4">
-            <label className="form-label">リージョン選択</label>
-            <select
-              value={selectedRegion}
-              onChange={(e) => setSelectedRegion(e.target.value)}
-              className="rank-select"
-              style={{ width: "100%" }}
-            >
-              {REGIONS.map((region) => (
-                <option key={region.code} value={region.code}>
-                  {region.name} ({region.code.toUpperCase()})
-                </option>
-              ))}
-            </select>
-          </div>
-
+          {players.length < 10 && (
+            <div className="mb-4">
+              <h2 className="section-title">■ リージョン選択</h2>
+              <select
+                value={selectedRegion}
+                onChange={(e) => setSelectedRegion(e.target.value)}
+                className="rank-select"
+                style={{ width: "30%" }}
+              >
+                {REGIONS.map((region) => (
+                  <option key={region.code} value={region.code}>
+                    {region.name} ({region.code.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <h2 className="section-title">■ ゲームモード</h2>
           <div className="mb-0">
-            <label className="form-label">ゲームモード</label>
             <div className="flex gap-2">
               <button
                 onClick={() => setGameMode("summoners-rift")}
                 className={`px-4 py-2 rounded transition-all ${
                   gameMode === "summoners-rift"
-                    ? "bg-emerald-700 text-white font-semibold"
+                    ? "bg-blue-500 text-white font-semibold"
                     : "sort-button-inactive"
                 }`}
               >
@@ -1595,7 +1669,7 @@ export default function LoLTeamMaker(): JSX.Element {
                 onClick={() => setGameMode("aram")}
                 className={`px-4 py-2 rounded transition-all ${
                   gameMode === "aram"
-                    ? "bg-emerald-700 text-white font-semibold"
+                    ? "bg-blue-500 text-white font-semibold"
                     : "sort-button-inactive"
                 }`}
               >
@@ -1604,30 +1678,21 @@ export default function LoLTeamMaker(): JSX.Element {
             </div>
           </div>
         </div>
-
         {/* ========== カード2: プレイヤー追加 ========== */}
         {players.length < 10 && (
           <div className="card-base mb-4 max-w-4xl mx-auto">
-            <h2 className="section-title">■ プレイヤー追加</h2>
-
+            <h2 className="section-title">
+              ■ プレイヤー追加（サモナー名#タグ）
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="form-label">サモナー名#タグ</label>
                 <div className="rounded-lg p-3 mb-4 border info-box">
                   <p className="text-blue-200 text-sm">
-                    💡複数行で一括追加可能です。カスタムロビーチャットを貼り付けて追加することできます。
-                  </p>
-                  <p className="text-blue-200 text-sm">
-                    &nbsp;&nbsp;&nbsp;&nbsp;※「〇〇がロビーに参加しました。」→
-                    追加されます
-                  </p>
-                  <p className="text-blue-200 text-sm">
-                    &nbsp;&nbsp;&nbsp;&nbsp;※「〇〇がロビーから退出しました。」→
-                    追加されません
+                    💡複数行で一括追加可能。カスタムロビーチャットを貼り付けて追加することできます。
                   </p>
                 </div>
                 <textarea
-                  placeholder="例:&#10;Player1#JP1がロビーに参加しました。&#10;Player2#JP1がロビーに参加しました。&#10;Player3#JP1がロビーに参加しました。"
+                  placeholder="例 ：下記入力の場合、Player1#JP1が追加されます。&#10;Player1#JP1がロビーに参加しました。&#10;Player1#JP1がロビーから退出しました。&#10;Player1#JP1がロビーに参加しました。"
                   value={currentInput}
                   onChange={(e) => setCurrentInput(e.target.value)}
                   rows={5}
@@ -1706,7 +1771,7 @@ export default function LoLTeamMaker(): JSX.Element {
                     <Loader2 className="w-5 h-5 animate-spin" />
                   </>
                 )}
-                {loading ? "取得中..." : "追加"}
+                {loading ? "追加中..." : "追加"}
               </button>
             </div>
           </div>
@@ -1787,7 +1852,7 @@ export default function LoLTeamMaker(): JSX.Element {
                   </p>
                   <p className="text-blue-200 text-sm">
                     &nbsp;&nbsp;&nbsp;&nbsp;●
-                    「他ロール拒否」を選択すると、選択したロール以外には割り当てられなくなります。
+                    「選択ロール最優先」を選択すると、選択したロール以外には割り当てられなくなります。
                   </p>
                 </>
               )}
@@ -1886,7 +1951,7 @@ export default function LoLTeamMaker(): JSX.Element {
                                 accentColor: "#0A84FF",
                               }}
                             />
-                            <span>他ロール拒否</span>
+                            <span>選択ﾛｰﾙ最優先</span>
                           </label>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1906,7 +1971,6 @@ export default function LoLTeamMaker(): JSX.Element {
                       </>
                     )}
                   </div>
-
                   <button
                     onClick={() => removePlayer(player.id)}
                     className="text-red-400 hover:text-red-300 p-2"
@@ -1943,7 +2007,12 @@ export default function LoLTeamMaker(): JSX.Element {
 
         {result && (
           <div className="result-modal-overlay">
-            <div id="team-result-container" className="result-container">
+            <div
+              id="team-result-container"
+              className={`result-container ${
+                gameMode === "aram" ? "result-container-aram" : ""
+              }`}
+            >
               <table
                 style={{
                   width: "100%",
@@ -1995,7 +2064,7 @@ export default function LoLTeamMaker(): JSX.Element {
                                 <td className="player-card-cell-role-icon blue-role-icon">
                                   <RoleIcon
                                     role={player.assignedRole!}
-                                    size={20}
+                                    size={24}
                                   />
                                 </td>
                               )}
@@ -2089,7 +2158,7 @@ export default function LoLTeamMaker(): JSX.Element {
                                 <td className="player-card-cell-role-icon red-role-icon">
                                   <RoleIcon
                                     role={player.assignedRole!}
-                                    size={20}
+                                    size={24}
                                   />
                                 </td>
                               )}
@@ -2169,12 +2238,23 @@ export default function LoLTeamMaker(): JSX.Element {
                     <tr className="button-area-row">
                       <td className="button-area-cell">
                         <button
+                          onClick={copyResultAsText}
+                          className="action-button"
+                          style={{ width: "100%", display: "block" }}
+                        >
+                          <span style={{ display: "inline-block" }}>
+                            📋 結果をテキストでコピー
+                          </span>
+                        </button>
+                      </td>
+                      <td className="button-area-cell">
+                        <button
                           onClick={copyResultToClipboard}
                           className="action-button"
                           style={{ width: "100%", display: "block" }}
                         >
                           <span style={{ display: "inline-block" }}>
-                            📋 クリップボードにコピー
+                            📋 結果を画像でコピー
                           </span>
                           <span
                             className="action-button-beta"

@@ -199,7 +199,7 @@ body {
 .summoner-name {
   color: white;
   font-weight: 600;
-  font-size: 9px;
+  font-size: 11px;
   display: block;
   line-height: 1.2;
   word-break: break-all;
@@ -455,7 +455,7 @@ body {
 
 .rank-select option {
   background: #0A1428;
-  color: #C89B3C;
+  color: #EEEEEE;
 }
 
 /* トグルボタン */
@@ -578,7 +578,13 @@ body {
   border-radius: 0.5rem;
   padding: 0.75rem;
 }
+.result-container-aram {
+  max-width: 50rem !important;
+}
 
+.result-container-aram .teams-grid {
+  min-width: 600px !important;
+}
 /* プログレスバー */
 .progress-bar-container {
   width: 100%;
@@ -636,7 +642,7 @@ body {
 
 .rank-select-registration option {
   background: #0A1428;
-  color: #C89B3C;
+  color: #EEEEEE;
 }
 
 .role-button-registration {
@@ -913,7 +919,6 @@ body {
   vertical-align: middle;  /* top から middle に変更 */
   width: 50px;
   text-align: center;
-  padding-right: 8px;
   height: 60px;
   padding-top: 0;  /* 4px から 0 に変更 */
 }
@@ -922,7 +927,7 @@ body {
   display: table-cell;
   vertical-align: middle;
   width: auto;
-  padding-left: 6px;
+  padding-left: 20px;
   height: 60px;
 }
 /* プロフィールアイコンのラッパー - 中央揃えのための追加 */
@@ -953,14 +958,14 @@ body {
 
 .button-area-cell {
   display: table-cell;
-  width: 50%;
+  width: 33.333%;
 }
 
-.button-area-cell:first-child {
+.button-area-cell:not(:last-child) {
   padding-right: 0.25rem;
 }
 
-.button-area-cell:last-child {
+.button-area-cell:not(:first-child) {
   padding-left: 0.25rem;
 }
 
