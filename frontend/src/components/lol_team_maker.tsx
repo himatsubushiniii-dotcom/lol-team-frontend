@@ -349,41 +349,28 @@ const divideTeams = (
     const sum2 = team2WithRoles.reduce((s, p) => s + p.rating, 0);
     const totalDiff = Math.abs(sum1 - sum2);
 
-    // 各ロールごとのレート差を計算
-    const roleDiffs: number[] = [];
-    const roleNames: Role[] = ["TOP", "JUG", "MID", "ADC", "SUP"];
-
-    roleNames.forEach((role) => {
-      const p1 = team1WithRoles.find((p) => p.assignedRole === role);
-      const p2 = team2WithRoles.find((p) => p.assignedRole === role);
-      if (p1 && p2) {
-        roleDiffs.push(Math.abs(p1.rating - p2.rating));
-      }
-    });
-
-    // 各ロール差の合計と最大値
-    const totalRoleDiff = roleDiffs.reduce((sum, diff) => sum + diff, 0);
-    const maxRoleDiff = Math.max(...roleDiffs);
-    const avgRoleDiff = totalRoleDiff / roleDiffs.length;
-
-    // ボットレーンの差も計算（ADC + SUP）
     const team1Bot = team1WithRoles.filter(
       (p) => p.assignedRole === "ADC" || p.assignedRole === "SUP"
     );
     const team2Bot = team2WithRoles.filter(
       (p) => p.assignedRole === "ADC" || p.assignedRole === "SUP"
     );
+
     const team1BotRating = team1Bot.reduce((s, p) => s + p.rating, 0);
     const team2BotRating = team2Bot.reduce((s, p) => s + p.rating, 0);
     const botDiff = Math.abs(team1BotRating - team2BotRating);
 
-    // スコア計算：各要素に重みをつける
-    // - totalDiff: チーム全体のバランス（重み: 1.0）
-    // - avgRoleDiff: 各ロールの平均差（重み: 2.0） ← 重要度を上げる
-    // - maxRoleDiff: 最大のロール差（重み: 3.0） ← さらに重要度を上げる
-    // - botDiff: ボットレーンの差（重み: 1.5）
-    const score =
-      totalDiff * 1.0 + avgRoleDiff * 2.0 + maxRoleDiff * 3.0 + botDiff * 1.5;
+    const roleDiffs: number[] = [];
+    ["TOP", "JUG", "MID"].forEach((role) => {
+      const p1 = team1WithRoles.find((p) => p.assignedRole === role);
+      const p2 = team2WithRoles.find((p) => p.assignedRole === role);
+      if (p1 && p2) {
+        roleDiffs.push(Math.abs(p1.rating - p2.rating));
+      }
+    });
+    const maxRoleDiff = Math.max(...roleDiffs);
+
+    const score = totalDiff + botDiff * 1.5 + maxRoleDiff * 0.5;
 
     if (score < bestScore) {
       bestScore = score;
