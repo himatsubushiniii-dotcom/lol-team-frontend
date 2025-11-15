@@ -917,7 +917,7 @@ body {
 .player-card-cell-profile {
   display: table-cell;
   vertical-align: middle;  /* top から middle に変更 */
-  width: 50px;
+  width: 70px;
   text-align: center;
   height: 60px;
   padding-top: 0;  /* 4px から 0 に変更 */

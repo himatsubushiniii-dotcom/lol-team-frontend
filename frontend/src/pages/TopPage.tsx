@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Users, Gamepad2, Sparkles } from "lucide-react";
+import { Users, Gamepad2, Sparkles, Trophy } from "lucide-react";
 
 export default function TopPage(): JSX.Element {
   const navigate = useNavigate();
@@ -16,20 +16,21 @@ export default function TopPage(): JSX.Element {
       available: true,
     },
     {
-      id: "service2",
-      title: "サービス2",
-      description: "近日公開予定のサービスです",
-      icon: Gamepad2,
-      color: "from-green-500 to-teal-600",
-      path: "/service2",
+      id: "flashback",
+      title: "LoL 2025 アワード",
+      description: "あなたの2025年のLoLプレイを振り返り！全問正解できるかな。。",
+      icon: Trophy,
+      color: "from-yellow-500 to-orange-600",
+      path: "/lol-flashback",
       available: false,
+      badge: "NEW"
     },
     {
       id: "service3",
       title: "サービス3",
       description: "近日公開予定のサービスです",
       icon: Sparkles,
-      color: "from-orange-500 to-red-600",
+      color: "from-green-500 to-teal-600",
       path: "/service3",
       available: false,
     },
@@ -83,6 +84,12 @@ export default function TopPage(): JSX.Element {
                   </div>
                 )}
 
+                {service.badge && service.available && (
+                  <div className="absolute top-4 right-4 bg-green-500 text-white text-xs px-3 py-1 rounded-full font-bold animate-pulse">
+                    {service.badge}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-4 mb-4">
                   <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
                     <Icon className="w-8 h-8 text-white" />
@@ -123,7 +130,8 @@ export default function TopPage(): JSX.Element {
         <div className="mt-16 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-8">
           <h3 className="text-2xl font-bold text-white mb-4">📢 お知らせ</h3>
           <div className="space-y-3 text-blue-200/80">
-            <p>• LoLカスタムチーム分けツールをリリースしました!</p>
+            <p>• 🆕 LoL 2025 Flashback がリリースされました！</p>
+            <p>• LoLカスタムチーム分けツールが好評稼働中！</p>
             <p>• 新しいサービスを順次追加予定です</p>
             <p>• ご要望・バグ報告はTwitter DMまで</p>
           </div>
