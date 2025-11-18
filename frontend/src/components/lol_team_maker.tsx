@@ -1762,7 +1762,7 @@ ${redTeamText}`;
                 className={`add-button ${
                   loading || !currentInput.trim()
                     ? "add-button-disabled"
-                    : "add-button-enabled"
+                    : "add-button-disabled"
                 }`}
               >
                 {loading && (
@@ -1771,7 +1771,7 @@ ${redTeamText}`;
                     <Loader2 className="w-5 h-5 animate-spin" />
                   </>
                 )}
-                {loading ? "追加中..." : "追加"}
+                {loading ? "追加中..." : "他システム障害の影響で、現在利用できません。"}
               </button>
             </div>
           </div>
