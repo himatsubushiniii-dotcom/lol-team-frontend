@@ -122,7 +122,7 @@ body {
 /* プレイヤーカード（ブルーチーム用） */
 .blue-player-card {
   background: rgba(10, 132, 255, 0.1);
-  border: 1px solid rgba(10, 132, 255, 0.3);
+  border: 2px solid rgba(10, 132, 255, 0.1);
   border-radius: 0.25rem;
   padding: 0.5rem;
 }
@@ -130,7 +130,7 @@ body {
 /* プレイヤーカード（レッドチーム用） */
 .red-player-card {
   background: rgba(220, 53, 69, 0.1);
-  border: 1px solid rgba(220, 53, 69, 0.3);
+  border: 2px solid rgba(220, 53, 69, 0.1);
   border-radius: 0.25rem;
   padding: 0.5rem;
 }
@@ -199,7 +199,7 @@ body {
 .summoner-name {
   color: white;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 9px;
   display: block;
   line-height: 1.2;
   word-break: break-all;
@@ -258,7 +258,6 @@ body {
   width: auto;
 }
 
-
 /* ボタンエリア */
 .button-area {
   /* 必要に応じてスタイルを追加 */
@@ -273,19 +272,19 @@ body {
   transition: all 0.2s;
   font-size: 0.875rem;
   background: rgba(200, 155, 60, 0.4);
-  border: 2px solid #c89b3c;
+  border: 1px solid #c89b3c;
   color: #f0e6d2;
   box-shadow: 0 0 10px rgba(200, 155, 60, 0.3);
 }
 
 .action-button:hover {
-  background: rgba(200, 155, 60, 0.6);  /* 追加 */
-  box-shadow: 0 0 15px rgba(200, 155, 60, 0.5);  /* 追加 */
+  background: rgba(200, 155, 60, 0.6); /* 追加 */
+  box-shadow: 0 0 15px rgba(200, 155, 60, 0.5); /* 追加 */
 }
 
 .action-button:active {
   transform: scale(0.95);
-  background: rgba(200, 155, 60, 0.3);  /* 追加 */
+  background: rgba(200, 155, 60, 0.3); /* 追加 */
 }
 
 .action-button-beta {
@@ -301,21 +300,53 @@ body {
   font-weight: bold;
   transition: all 0.2s;
   font-size: 0.875rem;
-  background: linear-gradient(135deg, #0a84ff 0%, #0066cc 100%);
-  border: 2px solid #0a84ff;
+  background: linear-gradient(
+    270deg,
+    #255e97,
+    #386685,
+    #104479,
+    #3077be,
+    #0066cc,
+    #0f4275
+  );
+  background-size: 400% 400%;
+  animation: gradientShiftBlue 3s ease infinite, pulseGlowBlue 2s ease-in-out infinite;
+  border: 1px solid #0a84ff;
   box-shadow: 0 0 20px rgba(10, 132, 255, 0.5);
 }
 
 .reshuffle-button:hover {
-  background: linear-gradient(135deg, #3d9fff 0%, #0a84ff 100%);  /* 追加 */
-  box-shadow: 0 0 25px rgba(10, 132, 255, 0.7);  /* 追加 */
+  transform: scale(1.02);
+  filter: brightness(1.15);
+  box-shadow: 0 0 30px rgba(10, 132, 255, 0.7);
 }
 
 .reshuffle-button:active {
-  transform: scale(0.95);
-  background: linear-gradient(135deg, #0066cc 0%, #004c99 100%);  /* 追加 */
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+/* 青色グラデーションアニメーション */
+@keyframes gradientShiftBlue {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
+/* 青色の脈打つ光 */
+@keyframes pulseGlowBlue {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(10, 132, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(10, 132, 255, 0.8);
+  }
+}
 /* 閉じるボタン */
 .close-button {
   padding: 0.5rem 1rem;
@@ -324,20 +355,20 @@ body {
   transition: all 0.2s;
   font-size: 0.875rem;
   background: rgba(100, 100, 100, 0.5);
-  border: 2px solid rgba(150, 150, 150, 0.7);
+  border: 1px solid rgba(150, 150, 150, 0.7);
   color: #e0e0e0;
   box-shadow: 0 0 10px rgba(100, 100, 100, 0.3);
 }
 
 .close-button:hover {
-  background: rgba(120, 120, 120, 0.6);  /* 追加 */
-  border-color: rgba(170, 170, 170, 0.8);  /* 追加 */
-  box-shadow: 0 0 15px rgba(120, 120, 120, 0.5);  /* 追加 */
+  background: rgba(120, 120, 120, 0.6); /* 追加 */
+  border-color: rgba(170, 170, 170, 0.8); /* 追加 */
+  box-shadow: 0 0 15px rgba(120, 120, 120, 0.5); /* 追加 */
 }
 
 .close-button:active {
   transform: scale(0.95);
-  background: rgba(80, 80, 80, 0.5);  /* 追加 */
+  background: rgba(80, 80, 80, 0.5); /* 追加 */
 }
 
 /* 平均ランク表示 */
@@ -350,15 +381,22 @@ body {
 .main-container {
   min-height: 100vh;
   background: linear-gradient(to bottom right, #020617, #172554, #020617);
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(10, 132, 255, 0.15) 0%, transparent 50%), 
-    radial-gradient(circle at 80% 80%, rgba(200, 155, 60, 0.15) 0%, transparent 50%);
+  background-image: radial-gradient(
+      circle at 20% 50%,
+      rgba(10, 132, 255, 0.15) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(200, 155, 60, 0.15) 0%,
+      transparent 50%
+    );
   padding: 1rem;
 }
 
 /* タイトルグラデーション */
 .title-gradient {
-  background: linear-gradient(135deg, #C89B3C 0%, #F0E6D2 50%, #C89B3C 100%);
+  background: linear-gradient(135deg, #c89b3c 0%, #f0e6d2 50%, #c89b3c 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -366,9 +404,7 @@ body {
 
 /* カード共通スタイル */
 .card-base {
-  background: linear-gradient(135deg, rgba(1, 10, 19, 0.9) 0%, rgba(0, 9, 19, 0.95) 100%);
-  border: 2px solid #0A1428;
-  box-shadow: 0 0 30px rgba(10, 132, 255, 0.3), inset 0 0 30px rgba(10, 132, 255, 0.05);
+  background: #1e293b;
   border-radius: 0.5rem;
   padding: 1rem;
 }
@@ -377,16 +413,15 @@ body {
 .input-field {
   width: 100%;
   padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
+  border-radius: 1rem;
   color: white;
-  background: rgba(1, 10, 19, 0.6);
-  border: 2px solid rgba(10, 132, 255, 0.5);
-  box-shadow: 0 0 10px rgba(10, 132, 255, 0.2);
+  background: #334155;
+  border-color:#334155;
   transition: all 0.2s;
 }
 
 .input-field:focus {
-  border-color: rgba(10, 132, 255, 0.8);
+  border-color: #FFFFFF;
   outline: none;
 }
 
@@ -407,7 +442,7 @@ body {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
-  border: 2px solid #0A84FF;
+  border: 2px solid #0a84ff;
   flex-shrink: 0;
 }
 
@@ -441,21 +476,18 @@ body {
 
 /* ランクセレクト */
 .rank-select {
-  background: rgba(200, 155, 60, 0.2);
-  color: #C89B3C;
-  border: 2px solid rgba(200, 155, 60, 0.5);
-  padding: 0.25rem 0.5rem;
+  background: #1e293b;
+  color: #ffffff;
   border-radius: 0.25rem;
   cursor: pointer;
-  font-weight: bold;
-  width: 140px;
+  width: 100px;
   flex-shrink: 0;
   font-size: 0.875rem;
 }
 
 .rank-select option {
-  background: #0A1428;
-  color: #EEEEEE;
+  background: #1e293b;
+  color: #ffffff;
 }
 
 /* トグルボタン */
@@ -470,12 +502,12 @@ body {
 
 .toggle-button-deselect {
   background: rgba(220, 53, 69, 0.3);
-  color: #DC3545;
+  color: #dc3545;
 }
 
 .toggle-button-select {
   background: rgba(10, 132, 255, 0.3);
-  color: #0A84FF;
+  color: #0a84ff;
 }
 
 /* ソートボタン */
@@ -487,16 +519,15 @@ body {
 }
 
 .sort-button-active {
-  background: linear-gradient(135deg, #C89B3C 0%, #F0E6D2 50%, #C89B3C 100%);
-  color: #0A1428;
-  border: 2px solid #C89B3C;
-  font-weight: bold;
+  background: #1e40af;
+  color: #FFFFFF;
+  border: 2px solid #3b82f6;
 }
 
 .sort-button-inactive {
   background: rgba(100, 100, 100, 0.3);
-  color: #C89B3C;
-  border: 1px solid rgba(200, 155, 60, 0.3);
+  color: #94a3b8;
+  border: 2px solid #475569;
 }
 
 /* 追加ボタン */
@@ -517,14 +548,14 @@ body {
 }
 
 .add-button-enabled {
-  background: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
-  border: 2px solid #0A84FF;
+  background: linear-gradient(135deg, #0a84ff 0%, #0066cc 100%);
+  border: 2px solid #0a84ff;
   box-shadow: 0 0 20px rgba(10, 132, 255, 0.5);
 }
 
 .add-button-disabled {
   background: rgba(100, 100, 100, 0.5);
-  border: 2px solid #0A84FF;
+  border: 2px solid #475569;
   cursor: not-allowed;
 }
 
@@ -545,10 +576,10 @@ body {
 }
 
 .create-teams-button-enabled {
-  background: linear-gradient(135deg, #C89B3C 0%, #F0E6D2 50%, #C89B3C 100%);
-  border: 2px solid #C89B3C;
+  background: linear-gradient(135deg, #c89b3c 0%, #f0e6d2 50%, #c89b3c 100%);
+  border: 2px solid #c89b3c;
   box-shadow: 0 0 30px rgba(200, 155, 60, 0.5);
-  color: #0A1428;
+  color: #0a1428;
 }
 
 .create-teams-button-disabled {
@@ -578,13 +609,7 @@ body {
   border-radius: 0.5rem;
   padding: 0.75rem;
 }
-.result-container-aram {
-  max-width: 50rem !important;
-}
 
-.result-container-aram .teams-grid {
-  min-width: 600px !important;
-}
 /* プログレスバー */
 .progress-bar-container {
   width: 100%;
@@ -594,72 +619,91 @@ body {
 }
 
 .progress-bar-fill {
-  background: #0A84FF;
+  background: #0a84ff;
   height: 0.5rem;
   border-radius: 9999px;
   transition: width 0.3s;
 }
 
-/* 情報ボックス */
-.info-box {
-  background: rgba(10, 132, 255, 0.05);
-  border: 1px solid rgba(10, 132, 255, 0.2);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-}
 .profile-icon-registration {
-  width: 2.5rem;        /* w-10 */
-  height: 2.5rem;       /* h-10 */
-  border-radius: 50%;   /* rounded-full */
-  border: 2px solid #0A84FF;
+  width: 2.5rem; /* w-10 */
+  height: 2.5rem; /* h-10 */
+  border-radius: 50%; /* rounded-full */
+  border: 2px solid #aaaaaa;
   flex-shrink: 0;
 }
 
 .summoner-name-registration {
   color: white;
   font-weight: 600;
-  width: 130px;
+  width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   display: block;
   flex-shrink: 0;
-  font-size: 0.875rem;  /* text-sm */
+  font-size: 0.875rem; /* text-sm */
 }
 
 .rank-select-registration {
-  font-weight: bold;
-  width: 140px;
+  width: 120px;
   flex-shrink: 0;
-  padding: 0.25rem 0.5rem;  /* px-2 py-1 */
-  border-radius: 0.25rem;    /* rounded */
+  padding: 0.25rem 0.5rem; /* px-2 py-1 */
+  border-radius: 0.25rem; /* rounded */
   cursor: pointer;
-  font-size: 0.875rem;       /* text-sm */
-  background: rgba(200, 155, 60, 0.2);
-  color: #C89B3C;
-  border: 2px solid rgba(200, 155, 60, 0.5);
+  font-size: 0.7rem; /* text-sm */
+  background: #1e293b;
+  color: #ffffff;
+  border: 1px solid #475569;
 }
 
 .rank-select-registration option {
-  background: #0A1428;
-  color: #EEEEEE;
+  background: #1e293b;
+  color: #ffffff;
 }
 
 .role-button-registration {
-  padding: 0.25rem 0.375rem;  /* px-1.5 py-1 */
-  border-radius: 0.25rem;      /* rounded */
-  font-size: 0.75rem;          /* text-xs */
+  padding: 0.25rem 0.375rem; /* px-1.5 py-1 */
+  border-radius: 0.25rem; /* rounded */
+  font-size: 0.75rem; /* text-xs */
   display: flex;
   align-items: center;
   gap: 0.25rem;
   transition: all 0.2s;
   cursor: pointer;
 }
-
+.btn-remove {
+  background: #dc2626;
+  color: white;
+}
+.btn-remove:hover {
+  background: #b91c1c;
+  transform: scale(1.05);
+}
+.btn-pin {
+  background: #64748b;
+  color: white;
+}
 .role-button-registration:hover {
   transform: scale(1.05);
 }
-
+.btn-watch {
+  background: #64748b;
+  color: white;
+}
+.btn-role-lock {
+  background: #64748b;
+  color: white;
+}
+.btn-small {
+  padding: 0.5rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  min-width: 20px;
+}
 .role-button-registration-selected {
   padding: 0.25rem 0.375rem;
   border-radius: 0.25rem;
@@ -669,9 +713,9 @@ body {
   gap: 0.25rem;
   transition: all 0.2s;
   cursor: pointer;
-  background: rgba(10, 132, 255, 0.8);
+  background: #1e40af;
   color: #fff;
-  border: 1px solid rgba(10, 132, 255, 0.8);
+  border: 2px solid rgba(10, 132, 255, 0.8);
 }
 
 .role-button-registration-selected:hover {
@@ -687,9 +731,9 @@ body {
   gap: 0.25rem;
   transition: all 0.2s;
   cursor: pointer;
-  background: rgba(50, 50, 50, 0.4);
-  color: rgba(150, 150, 150, 0.8);
-  border: 1px solid rgba(100, 100, 100, 0.3);
+  background: #1e293b;
+  color: #94a3b8;
+  border: 2px solid #475569;
 }
 
 .role-button-registration-unselected:hover {
@@ -697,10 +741,10 @@ body {
 }
 
 .toggle-all-button-registration {
-  padding: 0.25rem 0.5rem;  /* px-2 py-1 */
-  border-radius: 0.25rem;    /* rounded */
-  font-size: 0.75rem;        /* text-xs */
-  font-weight: 600;          /* font-semibold */
+  padding: 0.25rem 0.5rem; /* px-2 py-1 */
+  border-radius: 0.25rem; /* rounded */
+  font-size: 0.75rem; /* text-xs */
+  font-weight: 600; /* font-semibold */
   transition: all 0.2s;
   border: 1px solid currentColor;
 }
@@ -712,7 +756,7 @@ body {
   font-weight: 600;
   transition: all 0.2s;
   background: rgba(220, 53, 69, 0.3);
-  color: #DC3545;
+  color: #dc3545;
   border: 1px solid currentColor;
 }
 
@@ -723,31 +767,23 @@ body {
   font-weight: 600;
   transition: all 0.2s;
   background: rgba(10, 132, 255, 0.3);
-  color: #0A84FF;
+  color: #0a84ff;
   border: 1px solid currentColor;
 }
-.player-card-registration {
-  border-radius: 0.25rem;  /* rounded */
-  padding: 0.5rem;         /* p-2 */
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(10, 132, 255, 0.05);
-  border: 1px solid rgba(10, 132, 255, 0.2);
-}
+
 .title-icon {
-  color: #C89B3C;
+  color: #c89b3c;
 }
 
 .section-title {
-  color: #C89B3C;
+  color: #ffffff;
   font-size: 1.125rem;
   font-weight: bold;
   margin-bottom: 0.75rem;
 }
 
 .form-label {
-  color: #C89B3C;
+  color: #ffffff;
   font-weight: 600;
   margin-bottom: 0.5rem;
   display: block;
@@ -769,21 +805,13 @@ body {
 .subtitle-clickable {
   cursor: pointer;
   transition: color 0.2s;
-  color: #93C5FD;
+  color: #93c5fd;
 }
 
 .subtitle-clickable:hover {
-  color: #BFDBFE;
+  color: #bfdbfe;
 }
 
-/* 登録プレイヤーカードの基本レイアウト */
-.player-card-registration-flex {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-  overflow: hidden;
-}
 .player-info-wrapper {
   display: table;
   width: 100%;
@@ -892,7 +920,7 @@ body {
   display: table;
   width: 100%;
   table-layout: fixed;
-  border-collapse: collapse; 
+  border-collapse: collapse;
 }
 
 .player-card-inner-row {
@@ -916,16 +944,16 @@ body {
 
 .player-card-cell-profile {
   display: table-cell;
-  vertical-align: middle;  /* top から middle に変更 */
+  vertical-align: middle; /* top から middle に変更 */
   width: 70px;
   text-align: center;
   height: 60px;
-  padding-top: 0;  /* 4px から 0 に変更 */
+  padding-top: 0; /* 4px から 0 に変更 */
 }
 
 .player-card-cell-info {
   display: table-cell;
-  vertical-align: middle;
+  vertical-align: middle; /* これも middle であることを確認 */
   width: auto;
   padding-left: 20px;
   height: 60px;
@@ -941,9 +969,9 @@ body {
 .summoner-name-wrapper {
   display: block;
   vertical-align: middle;
-  line-height: 1.2;  /* 1 から 1.2 に変更 */
-  margin-top: 4px;  /* 2px から 4px に変更 */
-  text-align: center;  /* 追加 */
+  line-height: 1.2; /* 1 から 1.2 に変更 */
+  margin-top: 4px; /* 2px から 4px に変更 */
+  text-align: center; /* 追加 */
 }
 /* ボタンエリアのtableレイアウト */
 .button-area-table {
@@ -958,14 +986,14 @@ body {
 
 .button-area-cell {
   display: table-cell;
-  width: 33.333%;
+  width: 50%;
 }
 
-.button-area-cell:not(:last-child) {
+.button-area-cell:first-child {
   padding-right: 0.25rem;
 }
 
-.button-area-cell:not(:first-child) {
+.button-area-cell:last-child {
   padding-left: 0.25rem;
 }
 
@@ -983,4 +1011,739 @@ body {
 /* 広告が読み込まれない場合の代替表示 */
 ins.adsbygoogle[data-ad-status="unfilled"] {
   display: none !important;
+}
+
+/* 統計表示 */
+.stats-display {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-label {
+  color: #ffffff;
+  font-size: 0.875rem;
+}
+
+.stat-value {
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* 2カラムレイアウト */
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.column-header {
+  color: #c89b3c;
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid rgba(200, 155, 60, 0.3);
+}
+
+/* 移動ボタン */
+.move-button {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: 1px solid currentColor;
+  cursor: pointer;
+}
+
+.move-to-observer {
+  background: rgba(156, 163, 175, 0.3);
+  color: #9ca3af;
+}
+
+.move-to-observer:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+.move-to-playing {
+  background: rgba(10, 132, 255, 0.3);
+  color: #0a84ff;
+}
+/* インラインバッジ - 参加確定 */
+.pin-badge-inline {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* インラインバッジ - ロール固定 */
+.role-lock-badge-inline {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  animation: pulse-red 2s infinite;
+}
+.move-to-playing:hover {
+  background: rgba(10, 132, 255, 0.5);
+}
+/* 登録プレイヤーカード - 2カラムレイアウト用 */
+.player-card-registration {
+  border-radius: 0.25rem;
+  padding: 0.4rem;
+  background: #334155;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
+  min-width: 800px;
+  overflow: visible;
+}
+
+/* メンバー一覧全体にスクロール対応 */
+.players-list-container {
+  overflow-x: auto;
+  overflow-y: visible;
+  width: 100%;
+  /* カスタムスクロールバーのスタイリング */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.5) rgba(30, 41, 59, 0.5);
+}
+.players-list-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.players-list-container::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 4px;
+}
+
+.players-list-container::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5);
+  border-radius: 4px;
+}
+
+.players-list-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
+}
+/* レスポンシブ対応: 画面幅が768px未満の場合は縦並びに */
+@media (max-width: 768px) {
+  .player-card-registration {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+/* ボタンのホバー効果 */
+.btn-small:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+.btn-small:active {
+  transform: scale(0.95);
+}
+
+.btn-watch:hover {
+  background: #64748b;
+}
+
+.btn-role-lock:hover {
+  background: #475569;
+}
+/* 固定メンバーのバッジ */
+.pin-badge {
+  position: absolute;
+  bottom: 38px;
+  right: 8px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  z-index: 10;
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 希望ロール最優先のバッジ - より目立つデザインに */
+.role-priority-badge {
+  position: absolute;
+  bottom: 8px;  /* top → bottom に変更 */
+  right: 8px;  /* left: 8px → right: 68px に変更 (📌バッジの左側に配置) */
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  z-index: 10;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  animation: pulse-red 2s infinite;
+}
+@keyframes pulse-red {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 12px rgba(239, 68, 68, 0.6);
+  }
+}
+
+/* 固定メンバーのカードスタイル - 青い両サイドの線 */
+.player-card-registration.pinned {
+  border: 2px solid transparent;
+  border-left: 4px solid #3b82f6;
+  border-right: 4px solid #3b82f6;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+  box-shadow: 
+    -4px 0 12px rgba(59, 130, 246, 0.3),
+    4px 0 12px rgba(59, 130, 246, 0.3),
+    0 0 20px rgba(59, 130, 246, 0.2);
+  position: relative;
+}
+.player-card-registration.pinned::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  right: -4px;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.2) 0%,
+    transparent 10%,
+    transparent 90%,
+    rgba(59, 130, 246, 0.2) 100%
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+/* ロール固定のカードスタイル - 赤い両サイドの線 */
+.player-card-registration.role-locked {
+  border: 2px solid transparent;
+  border-left: 4px solid #ef4444;
+  border-right: 4px solid #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+  box-shadow: 
+    -4px 0 12px rgba(239, 68, 68, 0.3),
+    4px 0 12px rgba(239, 68, 68, 0.3),
+    0 0 20px rgba(239, 68, 68, 0.2);
+  position: relative;
+}
+/* ロール固定の追加効果 - グロー効果 */
+.player-card-registration.role-locked::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  right: -4px;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(239, 68, 68, 0.2) 0%,
+    transparent 10%,
+    transparent 90%,
+    rgba(239, 68, 68, 0.2) 100%
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+/* 両方の状態を持つカードのボーダースタイルは維持 */
+.player-card-registration.pinned.role-locked {
+  border: 2px solid transparent;
+  border-left: 4px solid #ec4899;
+  border-right: 4px solid #8b5cf6;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  box-shadow: 
+    -4px 0 12px rgba(236, 72, 153, 0.4),
+    4px 0 12px rgba(139, 92, 246, 0.4),
+    0 0 20px rgba(168, 85, 247, 0.3);
+}
+.player-card-registration.pinned.role-locked::before {
+  background: linear-gradient(
+    90deg,
+    rgba(236, 72, 153, 0.2) 0%,
+    transparent 10%,
+    transparent 90%,
+    rgba(139, 92, 246, 0.2) 100%
+  );
+}
+/* ボタンのアクティブスタイル */
+.btn-small.btn-pin.pinned {
+  background: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  transform: scale(1.05);
+}
+
+.btn-small.btn-role-lock.locked {
+  background: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  transform: scale(1.05);
+}
+/* ボタンのホバー効果を調整 */
+.btn-small.btn-pin:hover {
+  transform: scale(1.1);
+}
+
+.btn-small.btn-role-lock:hover {
+  transform: scale(1.1);
+}
+/* 観戦者への移動アニメーション */
+@keyframes slideToObserver {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateY(50px) scale(0.95);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100px) scale(0.9);
+  }
+}
+
+/* 参加者への移動アニメーション */
+@keyframes slideToPlaying {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateY(-50px) scale(0.95);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100px) scale(0.9);
+  }
+}
+
+/* フェードイン（表示時） */
+@keyframes fadeSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* アニメーション中のカード */
+.player-card-moving-to-observer {
+  animation: slideToObserver 0.4s ease-out forwards;
+}
+
+.player-card-moving-to-playing {
+  animation: slideToPlaying 0.4s ease-out forwards;
+}
+
+/* 新しく表示されるカード */
+.player-card-fade-in {
+  animation: fadeSlideIn 0.4s ease-out;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* チーム分け実行ボタン有効時のスタイル */
+.create-teams-button-animated {
+  background: linear-gradient(
+    270deg,
+    #f1d18c,
+    #F0E6D2,
+    #e0ba68,
+    #f1d18c,
+    #f1d18c,
+    #F0E6D2
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 3s ease infinite, pulseGlow 2s ease-in-out infinite;
+  border: 2px solid #C89B3C;
+  color: #0A1428;
+  font-weight: bold;
+  transition: transform 0.2s, filter 0.2s;
+}
+
+.create-teams-button-animated:hover {
+  transform: scale(1.02);
+  filter: brightness(1.1);
+}
+
+.create-teams-button-animated:active {
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+
+/* さらに派手なバージョン（オプション） */
+@keyframes rainbowGold {
+  0% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: hue-rotate(10deg);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+}
+
+.create-teams-button-rainbow {
+  background: linear-gradient(
+    270deg,
+    #f1d18c,
+    #FFD700,
+    #F0E6D2,
+    #f1d18c,
+    #dbbd7c,
+    #f1d18c,
+    #FFD700
+  );
+  background-size: 400% 400%;
+  animation: rainbowGold 4s ease infinite, pulseGlow 2s ease-in-out infinite;
+  border: 2px solid #ebc065;
+  color: #0A1428;
+  font-weight: bold;
+  transition: transform 0.2s, filter 0.2s;
+}
+
+.create-teams-button-rainbow:hover {
+  transform: scale(1.02);
+  filter: brightness(1.15);
+}
+
+.create-teams-button-rainbow:active {
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+/* 削除アニメーション */
+@keyframes fadeOutRemove {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8) rotate(-5deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-10deg);
+  }
+}
+
+/* 削除中のカード */
+.player-card-removing {
+  animation: fadeOutRemove 0.4s ease-out forwards;
+}
+
+/* ドラッグ中のカーソル表示 */
+.player-card-draggable {
+  cursor: grab;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  position: relative;
+}
+/* ホバー時：掴める感を演出 */
+.player-card-draggable:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(200, 155, 60, 0.4);
+  border-color: rgba(200, 155, 60, 0.8) !important;
+}
+/* ドラッグ開始時に全ドロップエリアをハイライト */
+.drop-zone-highlight {
+  background: rgba(200, 155, 60, 0.15) !important;
+  border: 2px dashed rgba(200, 155, 60, 0.6) !important;
+  box-shadow: 0 0 15px rgba(200, 155, 60, 0.3) !important;
+  animation: pulse-gold 1.5s ease-in-out infinite;
+}
+/* ホバー時により強調 */
+.drop-zone-highlight:hover {
+  background: rgba(200, 155, 60, 0.25) !important;
+  border: 2px dashed #c89b3c !important;
+  box-shadow: 0 0 25px rgba(200, 155, 60, 0.6) !important;
+  transform: scale(1.03);
+}
+/* 脈打つアニメーション */
+@keyframes pulse-gold {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(200, 155, 60, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(200, 155, 60, 0.5);
+  }
+}
+/* ドラッグ中のカーソル */
+.player-card-draggable:active {
+  cursor: grabbing;
+  transform: rotate(5deg) scale(0.95);
+}
+/* 青チームカードのホバー時の輝き */
+.blue-player-card.player-card-draggable:hover {
+  box-shadow: 
+    0 8px 20px rgba(10, 132, 255, 0.5),
+    0 0 30px rgba(200, 155, 60, 0.3);
+  border-color: rgba(10, 132, 255, 0.8) !important;
+}
+
+/* 赤チームカードのホバー時の輝き */
+.red-player-card.player-card-draggable:hover {
+  box-shadow: 
+    0 8px 20px rgba(220, 53, 69, 0.5),
+    0 0 30px rgba(200, 155, 60, 0.3);
+  border-color: rgba(220, 53, 69, 0.8) !important;
+}
+/* ホバー時：ドラッグ可能テキストを表示 */
+.player-card-draggable:hover .drag-hint {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.drag-hint {
+  position: absolute;
+  top: 10%;
+  left: 65%;
+  transform: translate(-50%, -50%) translateY(10px);
+  background: rgba(200, 155, 60, 0.95);
+  color: #0a1428;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+/* ホバー時にカード全体を少し明るくする */
+.player-card-draggable:hover::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+  border-radius: inherit;
+}
+/* ドラッグ中のカード（半透明＋回転） */
+.player-card-dragging {
+  opacity: 0.1;  /* 0.4 → 0.7 に変更 (70%の不透明度) */
+  transform: rotate(5deg) scale(0.95);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* ドロップ可能エリアのハイライト */
+.drop-zone-active {
+  background: rgba(200, 155, 60, 0.2) !important;
+  border: 2px dashed #c89b3c !important;
+  box-shadow: 0 0 20px rgba(200, 155, 60, 0.5) !important;
+  transform: scale(1.02);
+  transition: all 0.2s;
+}
+
+/* ドロップ可能エリア（通常時） */
+.drop-zone-ready {
+  transition: all 0.2s;
+}
+/* 使い方セクション - 折りたたみ式 */
+.usage-section {
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.usage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.25rem;
+}
+
+.usage-header:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 0.25rem;
+}
+
+.usage-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #93c5fd;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.usage-toggle-icon {
+  color: #93c5fd;
+  transition: transform 0.3s ease;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.usage-toggle-icon.open {
+  transform: rotate(180deg);
+}
+
+.usage-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
+}
+
+.usage-content.open {
+  grid-template-rows: 1fr;
+}
+
+.usage-content-inner {
+  overflow: hidden;
+  padding-top: 0.75rem;
+}
+
+.usage-item {
+  color: #bfdbfe;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  padding-left: 1.5rem;
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.usage-item::before {
+  content: "◆";
+  position: absolute;
+  left: 0.5rem;
+  color: #60a5fa;
+}
+
+.usage-item:last-child {
+  margin-bottom: 0;
+}
+/* ソート可能なヘッダー - ランク */
+.sort-header-rank {
+  width: 120px;
+  flex-shrink: 0;
+  margin-left: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  user-select: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.sort-header-rank:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.sort-header-rank:active {
+  transform: translateY(0);
+  background: rgba(59, 130, 246, 0.25);
+}
+
+/* アクティブ状態（ソート中） */
+.sort-header-rank-active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.sort-header-rank-active:hover {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+.sort-header-label {
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.sort-header-rank-active .sort-header-label {
+  color: #60a5fa;
+}
+
+.sort-header-icon {
+  font-size: 0.875rem;
+  opacity: 0.7;
+  transition: all 0.2s;
+  min-width: 12px;
+  text-align: center;
+}
+
+.sort-header-rank:hover .sort-header-icon {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.sort-header-rank-active .sort-header-icon {
+  opacity: 1;
+  color: #60a5fa;
+  animation: sortPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes sortPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
 }

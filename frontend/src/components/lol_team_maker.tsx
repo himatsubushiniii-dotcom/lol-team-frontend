@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Users, Trash2, Shuffle, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas";
 
@@ -23,6 +23,8 @@ interface Player {
   preferredRoles: Role[];
   assignedRole?: Role;
   strictRoleMatch: boolean;
+  isFixed: boolean;
+  isSpectator?: boolean;
 }
 
 interface RankData {
@@ -66,11 +68,11 @@ const REGIONS: Region[] = [
 
 // 全てのランクオプションを定義
 const RANK_OPTIONS = [
-  { tier: "UNRANKED", rank: "", display: "ランクなし" },
+  { tier: "UNRANKED", rank: "", display: "アンランク" },
   { tier: "CHALLENGER", rank: "I", display: "チャレンジャー" },
   { tier: "GRANDMASTER", rank: "I", display: "グランドマスター" },
-  { tier: "MASTER", rank: "I", display: "マスターI" },
-  { tier: "DIAMOND", rank: "I", display: "ダイヤモンドI" },
+  { tier: "MASTER", rank: "I", display: "マスター" },
+  { tier: "DIAMOND", rank: "I", display: "ダイヤモンドⅠ" },
   { tier: "DIAMOND", rank: "II", display: "ダイヤモンドII" },
   { tier: "DIAMOND", rank: "III", display: "ダイヤモンドIII" },
   { tier: "DIAMOND", rank: "IV", display: "ダイヤモンドIV" },
@@ -175,7 +177,7 @@ const AdBanner: React.FC<{ slot: string; format?: string }> = ({
       <ins
         className="adsbygoogle"
         style={{ display: "block" }}
-        data-ad-client="ca-pub-3227690111627241" // 実際のAdSense IDに変更
+        data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" // 実際のAdSense IDに変更
         data-ad-slot={slot}
         data-ad-format={format}
         data-full-width-responsive="true"
@@ -241,7 +243,7 @@ const fetchRankFromAPI = async (
   tagLine: string,
   region: string
 ): Promise<RankData> => {
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  const API_URL = "https://lol-team-backend.onrender.com/api/rank";
 
   try {
     const response = await fetch(`${API_URL}`, {
@@ -279,7 +281,7 @@ const divideTeams = (
     : null;
 
   const n = players.length;
-  const maxAttempts = 10000;
+  const maxAttempts = 5000;
   let attempts = 0;
 
   // 希望ロール絶対条件のプレイヤーを抽出
@@ -407,7 +409,7 @@ const divideTeams = (
       return {
         error: `${insufficientRoles.join(
           ", "
-        )}のロールが足りません。\n「選択ロール最優先」の選択を外すか、${insufficientRoles.join(
+        )}のロールが足りません。\n「🔒」の選択を外すか、${insufficientRoles.join(
           ", "
         )}を選択してください。`,
       };
@@ -537,6 +539,13 @@ export default function LoLTeamMaker(): JSX.Element {
   const [gameMode, setGameMode] = useState<"summoners-rift" | "aram">(
     "summoners-rift"
   );
+  const [observerPlayers, setObserverPlayers] = useState<Player[]>([]);
+  const playersListRef = useRef<HTMLDivElement>(null);
+  const [draggedPlayer, setDraggedPlayer] = useState<Player | null>(null);
+  const [dragSource, setDragSource] = useState<{
+    team: "blue" | "red";
+    role: Role;
+  } | null>(null);
 
   // ローカルストレージからプレイヤーを読み込む（初回のみ）
   useEffect(() => {
@@ -548,10 +557,27 @@ export default function LoLTeamMaker(): JSX.Element {
         const updatedPlayers = parsed.map((p: Player) => ({
           ...p,
           strictRoleMatch: p.strictRoleMatch ?? false,
+          isFixed: p.isFixed ?? false,
         }));
         setPlayers(updatedPlayers);
       } catch (e) {
         console.error("Failed to load saved players:", e);
+      }
+    }
+
+    // ✅ 観戦者も同様に読み込み
+    const savedObservers = localStorage.getItem("lol_team_observers");
+    if (savedObservers) {
+      try {
+        const parsed = JSON.parse(savedObservers);
+        const updatedObservers = parsed.map((p: Player) => ({
+          ...p,
+          strictRoleMatch: p.strictRoleMatch ?? false,
+          isFixed: p.isFixed ?? false,
+        }));
+        setObserverPlayers(updatedObservers);
+      } catch (e) {
+        console.error("Failed to load saved observers:", e);
       }
     }
   }, []);
@@ -565,6 +591,17 @@ export default function LoLTeamMaker(): JSX.Element {
     }
   }, [players]);
 
+  // ✅ 観戦者リストが変更されたら保存
+  useEffect(() => {
+    if (observerPlayers.length > 0) {
+      localStorage.setItem(
+        "lol_team_observers",
+        JSON.stringify(observerPlayers)
+      );
+    } else {
+      localStorage.removeItem("lol_team_observers");
+    }
+  }, [observerPlayers]);
   useEffect(() => {
     if (result) {
       document.body.style.overflow = "hidden";
@@ -636,13 +673,51 @@ export default function LoLTeamMaker(): JSX.Element {
           const newRoles = hasRole
             ? player.preferredRoles.filter((r) => r !== role)
             : [...player.preferredRoles, role];
-          return { ...player, preferredRoles: newRoles };
+
+          // ロールが0個または全ロール(5個)選択の場合、strictRoleMatchをfalseにする
+          const shouldDisableStrict =
+            newRoles.length === 0 || newRoles.length === ROLES.length;
+
+          return {
+            ...player,
+            preferredRoles: newRoles,
+            strictRoleMatch: shouldDisableStrict
+              ? false
+              : player.strictRoleMatch,
+          };
         }
         return player;
       })
     );
+
+    // 観戦者リストも更新
+    setObserverPlayers(
+      observerPlayers.map((player) => {
+        if (player.id === playerId) {
+          const hasRole = player.preferredRoles.includes(role);
+          const newRoles = hasRole
+            ? player.preferredRoles.filter((r) => r !== role)
+            : [...player.preferredRoles, role];
+
+          // ロールが0個または全ロール(5個)選択の場合、strictRoleMatchをfalseにする
+          const shouldDisableStrict =
+            newRoles.length === 0 || newRoles.length === ROLES.length;
+
+          return {
+            ...player,
+            preferredRoles: newRoles,
+            strictRoleMatch: shouldDisableStrict
+              ? false
+              : player.strictRoleMatch,
+          };
+        }
+        return player;
+      })
+    );
+
     setResult(null);
   };
+
   // ✅ ここに追加
   const changePlayerRank = (
     playerId: number,
@@ -668,11 +743,81 @@ export default function LoLTeamMaker(): JSX.Element {
   };
 
   const removePlayer = (id: number): void => {
-    setPlayers(players.filter((p) => p.id !== id));
-    setResult(null);
-    setAddResults(null); // 追加結果メッセージをクリア
+    // アニメーションクラスを追加
+    const element = document.querySelector(`[data-player-id="${id}"]`);
+    const observerElement = document.querySelector(
+      `[data-observer-id="${id}"]`
+    );
+
+    const targetElement = element || observerElement;
+
+    if (targetElement) {
+      targetElement.classList.add("player-card-removing");
+
+      // アニメーション完了後に状態を更新
+      setTimeout(() => {
+        setPlayers(players.filter((p) => p.id !== id));
+        setObserverPlayers(observerPlayers.filter((p) => p.id !== id));
+        setResult(null);
+        setAddResults(null);
+      }, 400); // アニメーション時間と同じ
+    } else {
+      // 要素が見つからない場合は即座に削除
+      setPlayers(players.filter((p) => p.id !== id));
+      setObserverPlayers(observerPlayers.filter((p) => p.id !== id));
+      setResult(null);
+      setAddResults(null);
+    }
+  };
+  // プレイ中→観戦
+  const moveToObserver = (playerId: number): void => {
+    const player = players.find((p) => p.id === playerId);
+    if (player) {
+      // アニメーションクラスを追加
+      const element = document.querySelector(`[data-player-id="${playerId}"]`);
+      if (element) {
+        element.classList.add("player-card-moving-to-observer");
+
+        // アニメーション完了後に状態を更新
+        setTimeout(() => {
+          setObserverPlayers([...observerPlayers, player]);
+          setPlayers(players.filter((p) => p.id !== playerId));
+          setResult(null);
+        }, 400); // アニメーション時間と同じ
+      } else {
+        // 要素が見つからない場合は即座に移動
+        setObserverPlayers([...observerPlayers, player]);
+        setPlayers(players.filter((p) => p.id !== playerId));
+        setResult(null);
+      }
+    }
   };
 
+  // 観戦→プレイ中
+  const moveToPlaying = (playerId: number): void => {
+    const player = observerPlayers.find((p) => p.id === playerId);
+    if (player) {
+      // アニメーションクラスを追加
+      const element = document.querySelector(
+        `[data-observer-id="${playerId}"]`
+      );
+      if (element) {
+        element.classList.add("player-card-moving-to-playing");
+
+        // アニメーション完了後に状態を更新
+        setTimeout(() => {
+          setPlayers([...players, player]);
+          setObserverPlayers(observerPlayers.filter((p) => p.id !== playerId));
+          setResult(null);
+        }, 400); // アニメーション時間と同じ
+      } else {
+        // 要素が見つからない場合は即座に移動
+        setPlayers([...players, player]);
+        setObserverPlayers(observerPlayers.filter((p) => p.id !== playerId));
+        setResult(null);
+      }
+    }
+  };
   const addPlayer = async (): Promise<void> => {
     setAddResults(null);
 
@@ -681,65 +826,20 @@ export default function LoLTeamMaker(): JSX.Element {
     }
 
     // 改行で分割してプレイヤーリストを作成
-    const inputLines = currentInput
-      .split("\n")
-      .filter((line) => line.trim())
-      .filter((line) => !line.includes("がロビーから退出しました"));
+    const inputLines = currentInput.split("\n").filter((line) => line.trim());
 
-    // 各プレイヤーの最後の行動のみを残す
-    const playerLastAction = new Map<string, string>();
-
-    currentInput.split("\n").forEach((line) => {
-      if (!line.trim()) return;
-
-      const cleanedLine = line
-        .trim()
-        .replace(/\u2066/g, "")
-        .replace(/\u2069/g, "")
-        .replace(/\s+(?=#)/g, "")
-        .replace(/がロビーに参加しました。?$/g, "")
-        .replace(/がロビーから退出しました。?$/g, "");
-
-      if (cleanedLine.includes("#")) {
-        // このプレイヤーの行動を記録（後から出てきた行で上書き）
-        playerLastAction.set(cleanedLine, line);
-      }
-    });
-
-    // 最後の行動が「退出」のプレイヤーを除外
-    const finalInputLines: string[] = [];
-    playerLastAction.forEach((lastLine, playerKey) => {
-      if (!lastLine.includes("がロビーから退出しました")) {
-        finalInputLines.push(lastLine);
-      }
-    });
-
-    if (finalInputLines.length === 0) {
-      return;
-    }
-
-    // 10人を超える場合はチェック
-    if (players.length + finalInputLines.length > 10) {
-      setAddResults({
-        success: [],
-        failed: finalInputLines.map((line) => ({
-          input: line,
-          error: `登録上限です。現在${players.length}人登録済み。あと${
-            10 - players.length
-          }人まで追加可能です。`,
-        })),
-      });
+    if (inputLines.length === 0) {
       return;
     }
 
     setLoading(true);
-    setTotalCount(finalInputLines.length);
+    setTotalCount(inputLines.length);
     setProcessedCount(0);
     const successList = [];
     const failedList = [];
 
-    for (let i = 0; i < finalInputLines.length; i++) {
-      const line = finalInputLines[i];
+    for (let i = 0; i < inputLines.length; i++) {
+      const line = inputLines[i];
       setCurrentProcessing(line);
       setProcessedCount(i + 1);
       // 不要な文字を削除してクリーンアップ
@@ -789,6 +889,7 @@ export default function LoLTeamMaker(): JSX.Element {
           tag,
           preferredRoles: [...ROLES], // デフォルトで全ロール選択
           strictRoleMatch: false,
+          isFixed: false,
           ...rankData,
         };
 
@@ -811,7 +912,29 @@ export default function LoLTeamMaker(): JSX.Element {
     if (successList.length > 0) {
       setPlayers([...players, ...successList.map((s) => s.player)]);
     }
+    // 成功したプレイヤーを追加
+    if (successList.length > 0) {
+      const previousLength = players.length; // 追加前の人数を保存
+      setPlayers([...players, ...successList.map((s) => s.player)]);
 
+      // 追加前が10人以下で、追加後に10人を超えた場合、スクロール処理を実行
+      const newLength = previousLength + successList.length;
+      if (previousLength < 10 && newLength >= 10) {
+        // ← ここを修正
+        setTimeout(() => {
+          if (playersListRef.current) {
+            const elementPosition =
+              playersListRef.current.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - 100;
+
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: "smooth",
+            });
+          }
+        }, 300);
+      }
+    }
     // 結果を表示
     setAddResults({
       success: successList,
@@ -830,6 +953,46 @@ export default function LoLTeamMaker(): JSX.Element {
     setProcessedCount(0);
     setTotalCount(0);
   };
+
+  // 固定メンバー切り替え
+  const toggleFixedPlayer = (playerId: number): void => {
+    setPlayers(
+      players.map((player) =>
+        player.id === playerId
+          ? { ...player, isFixed: !player.isFixed }
+          : player
+      )
+    );
+    setResult(null);
+  };
+
+  // ランダム10人選出
+  const selectRandom10Players = (): void => {
+
+    const fixedPlayers = players.filter((p) => p.isFixed);
+    const flexiblePlayers = players.filter((p) => !p.isFixed);
+
+    if (fixedPlayers.length >= 10) {
+      alert("参加確定が10人超えています。参加確定を減らしてください。");
+      return;
+    }
+
+    const needed = 10 - fixedPlayers.length;
+
+    // 最終的な選出を実行（演出なし）
+    const finalShuffled = [...flexiblePlayers].sort(() => Math.random() - 0.5);
+    const selected = finalShuffled.slice(0, needed);
+    const notSelected = flexiblePlayers.filter(
+      (p) => !selected.find((s) => s.id === p.id)
+    );
+
+    setPlayers([...fixedPlayers, ...selected]);
+    setObserverPlayers([...observerPlayers, ...notSelected]);
+    setResult(null);
+
+    alert(`✅ ${selected.length}人をランダムに選出しました!`);
+  };
+
   const areSetsEqual = (set1: Set<number>, set2: Set<number>): boolean => {
     if (set1.size !== set2.size) return false;
     for (const item of set1) {
@@ -978,13 +1141,203 @@ export default function LoLTeamMaker(): JSX.Element {
       diff: Math.abs(avgRating1 - avgRating2),
     });
   };
+  // ドラッグ開始
+  const handleDragStart = (
+    player: Player,
+    team: "blue" | "red",
+    role: Role,
+    e: React.DragEvent
+  ) => {
+    setDraggedPlayer(player);
+    setDragSource({ team, role });
 
+    // ドラッグ中のクラスを追加
+    const target = e.currentTarget as HTMLElement;
+    target.classList.add("player-card-dragging");
+
+    // 全てのドロップ可能エリアをハイライト
+    setTimeout(() => {
+      document.querySelectorAll(".drop-zone-ready").forEach((el) => {
+        el.classList.add("drop-zone-highlight");
+      });
+    }, 0);
+
+    // ドラッグイメージをカスタマイズ（オプション）
+    const dragImage = target.cloneNode(true) as HTMLElement;
+    dragImage.style.opacity = "1";
+    document.body.appendChild(dragImage);
+    dragImage.style.position = "absolute";
+    dragImage.style.top = "-1000px";
+
+    // カードの中心位置でドラッグするように設定
+    const rect = target.getBoundingClientRect();
+    const offsetX = rect.width / 2;
+    const offsetY = rect.height / 2;
+
+    e.dataTransfer.setDragImage(dragImage, offsetX, offsetY);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
+  };
+
+  // ドラッグオーバー（ドロップ可能にする）
+  const handleDragOver = (
+    e: React.DragEvent,
+    targetTeam: "blue" | "red",
+    targetRole: Role
+  ) => {
+    e.preventDefault();
+
+    // 現在ホバー中のエリアをさらに強調
+    const target = e.currentTarget as HTMLElement;
+    if (!target.classList.contains("drop-zone-active")) {
+      target.classList.add("drop-zone-active");
+    }
+  };
+  // ドラッグリーブ（エリアから離れた時）
+  const handleDragLeave = (e: React.DragEvent) => {
+    const target = e.currentTarget as HTMLElement;
+    target.classList.remove("drop-zone-active");
+    // drop-zone-highlight は残す（ドラッグ中は全エリアがハイライトされたまま）
+  };
+  // ドラッグ終了（成功・失敗に関わらず）
+  const handleDragEnd = (e: React.DragEvent) => {
+    const target = e.currentTarget as HTMLElement;
+    target.classList.remove("player-card-dragging");
+
+    // 全てのハイライトを削除
+    document
+      .querySelectorAll(".drop-zone-highlight, .drop-zone-active")
+      .forEach((el) => {
+        el.classList.remove("drop-zone-highlight");
+        el.classList.remove("drop-zone-active");
+      });
+  };
+  // 平均ランクを再計算する関数
+  const recalculateTeamStats = (
+    blueTeam: Player[],
+    redTeam: Player[]
+  ): TeamResult => {
+    const avgRating1 =
+      blueTeam.reduce((s, p) => s + p.rating, 0) / blueTeam.length;
+    const avgRating2 =
+      redTeam.reduce((s, p) => s + p.rating, 0) / redTeam.length;
+
+    const avgTier1 = ratingToTier(Math.round(avgRating1));
+    const avgTier2 = ratingToTier(Math.round(avgRating2));
+
+    return {
+      blueTeam,
+      redTeam,
+      avgRating1,
+      avgRating2,
+      avgTier1,
+      avgTier2,
+      diff: Math.abs(avgRating1 - avgRating2),
+    };
+  };
+  // ドロップ処理
+  const handleDrop = (
+    targetTeam: "blue" | "red",
+    targetRole: Role,
+    e: React.DragEvent
+  ) => {
+    e.preventDefault();
+
+    // 全てのハイライトを削除
+    document
+      .querySelectorAll(".drop-zone-highlight, .drop-zone-active")
+      .forEach((el) => {
+        el.classList.remove("drop-zone-highlight");
+        el.classList.remove("drop-zone-active");
+      });
+
+    if (!draggedPlayer || !dragSource || !result) return;
+
+    const sourceTeam =
+      dragSource.team === "blue" ? result.blueTeam : result.redTeam;
+    const targetTeamArray =
+      targetTeam === "blue" ? result.blueTeam : result.redTeam;
+
+    // 同じ位置にドロップした場合は何もしない
+    if (dragSource.team === targetTeam && dragSource.role === targetRole) {
+      setDraggedPlayer(null);
+      setDragSource(null);
+      return;
+    }
+
+    // ターゲット位置のプレイヤーを取得
+    const targetPlayer = targetTeamArray.find(
+      (p) => p.assignedRole === targetRole
+    );
+
+    let newBlueTeam = [...result.blueTeam];
+    let newRedTeam = [...result.redTeam];
+
+    if (dragSource.team === targetTeam) {
+      // 同じチーム内でのロール交換
+      if (targetPlayer) {
+        // ロールを入れ替え
+        const updatedTeam = targetTeamArray.map((p) => {
+          if (p.id === draggedPlayer.id) {
+            return { ...p, assignedRole: targetRole };
+          }
+          if (p.id === targetPlayer.id) {
+            return { ...p, assignedRole: dragSource.role };
+          }
+          return p;
+        });
+
+        if (targetTeam === "blue") {
+          newBlueTeam = updatedTeam;
+        } else {
+          newRedTeam = updatedTeam;
+        }
+      }
+    } else {
+      // 異なるチーム間での移動
+      if (targetPlayer) {
+        // ターゲット位置にプレイヤーがいる場合は入れ替え
+        const sourceTeamUpdated = sourceTeam.map((p) =>
+          p.id === draggedPlayer.id
+            ? { ...targetPlayer, assignedRole: dragSource.role }
+            : p
+        );
+        const targetTeamUpdated = targetTeamArray.map((p) =>
+          p.id === targetPlayer.id
+            ? { ...draggedPlayer, assignedRole: targetRole }
+            : p
+        );
+
+        newBlueTeam =
+          dragSource.team === "blue" ? sourceTeamUpdated : targetTeamUpdated;
+        newRedTeam =
+          dragSource.team === "red" ? sourceTeamUpdated : targetTeamUpdated;
+      } else {
+        // ターゲット位置が空の場合（通常は発生しない）
+        alert("エラー: ターゲット位置が無効です");
+        setDraggedPlayer(null);
+        setDragSource(null);
+        return;
+      }
+    }
+
+    // ★ 平均ランクを再計算してresultを更新
+    const updatedResult = recalculateTeamStats(newBlueTeam, newRedTeam);
+    setResult(updatedResult);
+
+    setDraggedPlayer(null);
+    setDragSource(null);
+  };
   const resetToInitialState = (): void => {
     setPlayers([]);
+    setObserverPlayers([]);
     setResult(null);
     setCurrentInput("");
     setAddResults(null);
     setSortType("none");
+
+    // ✅ ローカルストレージからも削除
+    localStorage.removeItem("lol_team_players");
+    localStorage.removeItem("lol_team_observers");
   };
 
   const copyResultToClipboard = async (): Promise<void> => {
@@ -1525,83 +1878,7 @@ export default function LoLTeamMaker(): JSX.Element {
       alert("❌ スクリーンショットの生成に失敗しました");
     }
   };
-  const copyResultAsText = async (): Promise<void> => {
-    if (!result) return;
 
-    const blueTeamText = result.blueTeam
-      .map((p) => {
-        const roleText =
-          gameMode === "summoners-rift" ? `${p.assignedRole} ` : "";
-        const rankText = formatRankJapanese(p.tier, p.rank);
-        return `${roleText}${p.summonerName}#${p.tag} (${rankText})`;
-      })
-      .join("\n");
-
-    const redTeamText = result.redTeam
-      .map((p) => {
-        const roleText =
-          gameMode === "summoners-rift" ? `${p.assignedRole} ` : "";
-        const rankText = formatRankJapanese(p.tier, p.rank);
-        return `${roleText}${p.summonerName}#${p.tag} (${rankText})`;
-      })
-      .join("\n");
-
-    const avgRank1Text = formatRankJapanese(
-      result.avgTier1.tier,
-      result.avgTier1.rank
-    );
-    const avgRank2Text = formatRankJapanese(
-      result.avgTier2.tier,
-      result.avgTier2.rank
-    );
-
-    const textToCopy = `【チーム分け結果】
-
-━━━ ブルーチーム ━━━
-チームの平均ランク: ${avgRank1Text}
-
-${blueTeamText}
-
-━━━ レッドチーム ━━━
-チームの平均ランク: ${avgRank2Text}
-
-${redTeamText}`;
-
-    try {
-      await navigator.clipboard.writeText(textToCopy);
-      alert("✅ テキストをクリップボードにコピーしました!");
-    } catch (err) {
-      console.error("コピーに失敗:", err);
-      alert("❌ コピーに失敗しました");
-    }
-  };
-  const formatRankJapanese = (tier: string, rank: string): string => {
-    const tierMap: { [key: string]: string } = {
-      CHALLENGER: "チャレンジャー",
-      GRANDMASTER: "グランドマスター",
-      MASTER: "マスター",
-      DIAMOND: "ダイヤモンド",
-      EMERALD: "エメラルド",
-      PLATINUM: "プラチナ",
-      GOLD: "ゴールド",
-      SILVER: "シルバー",
-      BRONZE: "ブロンズ",
-      IRON: "アイアン",
-      UNRANKED: "ランクなし",
-    };
-
-    const rankMap: { [key: string]: string } = {
-      I: "I",
-      II: "II",
-      III: "III",
-      IV: "IV",
-    };
-
-    const tierJapanese = tierMap[tier] || tier;
-    const rankJapanese = rank ? rankMap[rank] || rank : "";
-
-    return rank ? `${tierJapanese}${rankJapanese}` : tierJapanese;
-  };
   return (
     <div className="main-container">
       <div className="max-w-6xl mx-auto">
@@ -1629,37 +1906,20 @@ ${redTeamText}`;
             onClick={resetToInitialState}
             title="クリックで初期状態に戻す"
           >
-            希望ロールをもとに自動でバランス調整されたチーム分け
+            公平なチーム分けとロール配分
           </p>
           <AdBanner slot="1234567890" />
         </div>
         {/* ========== カード1: 基本設定 ========== */}
         <div className="card-base mb-4 max-w-4xl mx-auto">
-          {players.length < 10 && (
-            <div className="mb-4">
-              <h2 className="section-title">■ リージョン選択</h2>
-              <select
-                value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
-                className="rank-select"
-                style={{ width: "30%" }}
-              >
-                {REGIONS.map((region) => (
-                  <option key={region.code} value={region.code}>
-                    {region.name} ({region.code.toUpperCase()})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <h2 className="section-title">■ ゲームモード</h2>
           <div className="mb-0">
+            <label className="form-label">ゲームモード</label>
             <div className="flex gap-2">
               <button
                 onClick={() => setGameMode("summoners-rift")}
                 className={`px-4 py-2 rounded transition-all ${
                   gameMode === "summoners-rift"
-                    ? "bg-blue-500 text-white font-semibold"
+                    ? "sort-button-active"
                     : "sort-button-inactive"
                 }`}
               >
@@ -1669,7 +1929,7 @@ ${redTeamText}`;
                 onClick={() => setGameMode("aram")}
                 className={`px-4 py-2 rounded transition-all ${
                   gameMode === "aram"
-                    ? "bg-blue-500 text-white font-semibold"
+                    ? "sort-button-active"
                     : "sort-button-inactive"
                 }`}
               >
@@ -1679,206 +1939,428 @@ ${redTeamText}`;
           </div>
         </div>
         {/* ========== カード2: プレイヤー追加 ========== */}
-        {players.length < 10 && (
-          <div className="card-base mb-4 max-w-4xl mx-auto">
-            <h2 className="section-title">
-              ■ プレイヤー追加（サモナー名#タグ）
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <div className="rounded-lg p-3 mb-4 border info-box">
-                  <p className="text-blue-200 text-sm">
-                    💡複数行で一括追加可能。カスタムロビーチャットを貼り付けて追加することできます。
-                  </p>
-                </div>
+        <div className="card-base mb-4 max-w-4xl mx-auto">
+          <label className="form-label">プレイヤー追加</label>
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              {/* 左側: リージョン選択 */}
+              <div
+                style={{
+                  width: "60px",
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <select
+                  value={selectedRegion}
+                  onChange={(e) => setSelectedRegion(e.target.value)}
+                  className="rank-select"
+                  style={{
+                    width: "100%",
+                    height: "120px",
+                  }}
+                >
+                  {REGIONS.map((region) => (
+                    <option key={region.code} value={region.code}>
+                      {region.code.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 右側: テキストエリア */}
+              <div style={{ flex: 1 }}>
                 <textarea
-                  placeholder="例 ：下記入力の場合、Player1#JP1が追加されます。&#10;Player1#JP1がロビーに参加しました。&#10;Player1#JP1がロビーから退出しました。&#10;Player1#JP1がロビーに参加しました。"
+                  placeholder="例 :下記入力の場合、Player1#JP1が追加されます。&#10;Player1#JP1がロビーに参加しました。&#10;Player1#JP1がロビーから退出しました。&#10;Player1#JP1がロビーに参加しました。"
                   value={currentInput}
                   onChange={(e) => setCurrentInput(e.target.value)}
                   rows={5}
-                  className="w-full px-4 py-2 rounded text-white placeholder-white/50 border-2 border-blue-500/50 focus:border-blue-400 focus:outline-none transition-all input-field"
+                  className="w-full px-4 py-2 rounded text-white placeholder-white/50 border-2 focus:border-blue-400 focus:outline-none transition-all input-field"
                 />
               </div>
+            </div>
 
-              {addResults && (
-                <div className="space-y-3">
-                  {addResults.success.length > 0 && (
-                    <div className="message-success">
-                      <h3 className="font-bold text-green-400 mb-2">
-                        ✅ 追加成功 ({addResults.success.length}人)
-                      </h3>
-                      <div className="space-y-1">
-                        {addResults.success.map((item, idx) => (
-                          <div key={idx} className="text-sm text-green-300">
-                            • {item.input}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+            {addResults && (
+              <div className="space-y-3">
+                {addResults.success.length > 0 && (
+                  <div className="message-success">
+                    <h3 className="font-bold text-green-400 mb-2">
+                      ✅ 追加成功 ({addResults.success.length}人)
+                    </h3>
+                  </div>
+                )}
 
-                  {addResults.failed.length > 0 && (
-                    <div className="rounded-lg p-4 border-2 border-red-500/50 message-error">
-                      <h3 className="font-bold text-red-400 mb-2">
-                        ❌ 追加失敗 ({addResults.failed.length}人)
-                      </h3>
-                      <div className="space-y-2">
-                        {addResults.failed.map((item, idx) => (
-                          <div key={idx} className="text-sm">
-                            <div className="text-red-300">• {item.input}</div>
-                            <div className="text-red-400 ml-4 text-xs">
-                              → {item.error}
-                            </div>
+                {addResults.failed.length > 0 && (
+                  <div className="rounded-lg p-4 border-2 border-red-500/50 message-error">
+                    <h3 className="font-bold text-red-400 mb-2">
+                      ❌ 追加失敗 ({addResults.failed.length}人)
+                    </h3>
+                    <div className="space-y-2">
+                      {addResults.failed.map((item, idx) => (
+                        <div key={idx} className="text-sm">
+                          <div className="text-red-300">• {item.input}</div>
+                          <div className="text-red-400 ml-4 text-xs">
+                            → {item.error}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {loading && currentProcessing && (
+              <div className="rounded-lg p-3 border-2 border-blue-500/50 message-processing">
+                <div className="text-blue-300 text-sm mb-2">
+                  処理中: {currentProcessing}
+                </div>
+                <div className="text-blue-400 text-xs mb-2">
+                  進捗: {processedCount}/{totalCount}
+                </div>
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar-fill"
+                    style={{
+                      width: `${(processedCount / totalCount) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={addPlayer}
+              disabled={loading || !currentInput.trim()}
+              className={`add-button ${
+                loading || !currentInput.trim()
+                  ? "add-button-disabled"
+                  : "add-button-enabled"
+              }`}
+            >
+              {loading && (
+                <>
+                  <div className="absolute inset-0 bg-black/30 rounded-lg"></div>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </>
+              )}
+              {loading ? "取得中..." : "追加"}
+            </button>
+          </div>
+        </div>
+        <div className="card-base mb-4 max-w-4xl mx-auto">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "1rem",
+            }}
+          >
+            <div className="stats-display">
+              <div className="stat-item">
+                <span className="stat-label">👥参加者 :</span>
+                <span className="stat-value">{players.length}人</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">👀️観戦 :</span>
+                <span className="stat-value">{observerPlayers.length}人</span>
+              </div>
+              {gameMode === "summoners-rift" && players.length > 10 && (
+                <div className="stat-item">
+                  <span className="stat-label">📌参加確定枠 :</span>
+                  <span className="stat-value">
+                    {players.filter((p) => p.isFixed).length}人
+                  </span>
                 </div>
               )}
+            </div>
 
-              {loading && currentProcessing && (
-                <div className="rounded-lg p-3 border-2 border-blue-500/50 message-processing">
-                  <div className="text-blue-300 text-sm mb-2">
-                    処理中: {currentProcessing}
-                  </div>
-                  <div className="text-blue-400 text-xs mb-2">
-                    進捗: {processedCount}/{totalCount}
-                  </div>
-                  <div className="progress-bar-container">
-                    <div
-                      className="progress-bar-fill"
-                      style={{
-                        width: `${(processedCount / totalCount) * 100}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button
+                onClick={selectRandom10Players}
+                disabled={players.length < 11}
+                className="btn"
+                style={{
+                  background:
+                    players.length <　11
+                      ? "rgba(100, 100, 100, 0.3)"
+                      : "linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)",
+                  border:
+                    players.length <　11
+                      ? "2px solid rgba(100, 100, 100, 0.5)"
+                      : "2px solid #9333ea",
+                  boxShadow:
+                    players.length <　11
+                      ? "none"
+                      : "0 0 20px rgba(147, 51, 234, 0.5)",
+                  color:
+                    players.length <　11
+                      ? "#666"
+                      : "white",
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.875rem",
+                  cursor:
+                    players.length <　11
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                🎲 ランダム10人選出
+              </button>
 
               <button
-                onClick={addPlayer}
-                disabled={loading || !currentInput.trim()}
-                className={`add-button ${
-                  loading || !currentInput.trim()
-                    ? "add-button-disabled"
-                    : "add-button-enabled"
+                onClick={createTeams}
+                disabled={
+                  gameMode === "summoners-rift"
+                    ? players.length !== 10
+                    : players.length < 2
+                }
+                className={`btn ${
+                  (gameMode === "summoners-rift" && players.length === 10) ||
+                  (gameMode === "aram" && players.length >= 2)
+                    ? "create-teams-button-animated" // または "create-teams-button-rainbow" でさらに派手に
+                    : ""
                 }`}
+                style={{
+                  borderRadius: "0.25rem",
+                  background:
+                    (gameMode === "summoners-rift" && players.length === 10) ||
+                    (gameMode === "aram" && players.length >= 2)
+                      ? undefined // CSSアニメーションを使用するためundefinedに
+                      : "rgba(100, 100, 100, 0.3)",
+                  border:
+                    (gameMode === "summoners-rift" && players.length === 10) ||
+                    (gameMode === "aram" && players.length >= 2)
+                      ? undefined // CSSアニメーションを使用するためundefinedに
+                      : "2px solid rgba(100, 100, 100, 0.5)",
+                  boxShadow:
+                    (gameMode === "summoners-rift" && players.length === 10) ||
+                    (gameMode === "aram" && players.length >= 2)
+                      ? undefined // CSSアニメーションを使用するためundefinedに
+                      : "",
+                  color:
+                    (gameMode === "summoners-rift" && players.length === 10) ||
+                    (gameMode === "aram" && players.length >= 2)
+                      ? "#0A1428"
+                      : "#666",
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.875rem",
+                  cursor:
+                    (gameMode === "summoners-rift" && players.length === 10) ||
+                    (gameMode === "aram" && players.length >= 2)
+                      ? "pointer"
+                      : "not-allowed",
+                }}
               >
-                {loading && (
-                  <>
-                    <div className="absolute inset-0 bg-black/30 rounded-lg"></div>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  </>
-                )}
-                {loading ? "追加中..." : "追加"}
+                <Shuffle
+                  className="w-5 h-5"
+                  style={{
+                    display: "inline-block",
+                    verticalAlign: "middle",
+                    marginRight: "0.5rem",
+                  }}
+                />
+                <span
+                  style={{ display: "inline-block", verticalAlign: "middle" }}
+                >
+                  チーム分け実行
+                </span>
               </button>
             </div>
           </div>
-        )}
-        {players.length > 0 && (
-          <div className="card-base mb-4 max-w-4xl mx-auto">
-            <table
+          {players.length < 10 && (
+            <div style={{ marginTop: "0.5rem" }}>
+              <span style={{ color: "#fbbf24" }}>
+                ※ 参加者を10人にしてください(現在{players.length}人)
+              </span>
+            </div>
+          )}
+        </div>
+        {(players.length > 0 || observerPlayers.length > 0) && (
+          <div
+            ref={playersListRef}
+            className="card-base mb-4 max-w-4xl mx-auto"
+          >
+            {/* 説明文を追加 */}
+            <div className="usage-section">
+              <div
+                className="usage-header"
+                onClick={() => {
+                  const content = document.getElementById("usage-content");
+                  const icon = document.getElementById("usage-toggle-icon");
+                  if (content && icon) {
+                    content.classList.toggle("open");
+                    icon.classList.toggle("open");
+                  }
+                }}
+              >
+                <div className="usage-title">
+                  <span>💡</span>
+                  <span>使い方</span>
+                </div>
+                <div id="usage-toggle-icon" className="usage-toggle-icon">
+                  ▼
+                </div>
+              </div>
+
+              <div id="usage-content" className="usage-content">
+                <div className="usage-content-inner">
+                  <div className="usage-item">
+                    過去最高ランクと差がある場合、選択されてる「ランク」を調整してください。
+                  </div>
+                  {gameMode === "summoners-rift" && (
+                    <>
+                      <div className="usage-item">
+                        「各ロール」ボタンを選択すると希望ロールを優先しつつ、必要に応じて他ロールにも割り当てます。
+                      </div>
+                      <div className="usage-item">
+                        「🔓」を押下すると、選択したロール以外には割り当てられなくなります。
+                      </div>
+                      <div className="usage-item">
+                        「📍」を押下すると、「ランダム10人選出」で必ず選出されます。
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            {players.length > 0 && (
+              <div className="max-w-4xl mx-auto">
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                  }}
+                >
+                  <tbody>
+                    <tr>
+                      <td
+                        style={{ textAlign: "left", verticalAlign: "middle" }}
+                      >
+                        <h2 className="section-title">
+                           メンバー一覧 (👥参加者{players.length}人、👀観戦者
+                          {observerPlayers.length}人)
+                        </h2>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {players.length > 0 && (
+            <div
               style={{
-                width: "100%",
-                marginBottom: "0.75rem",
-                borderCollapse: "collapse",
+                display: "flex",
+                alignItems: "center",
+                padding: "0.5rem 0.75rem",
+                background: "rgba(100, 100, 100, 0.2)",
+                borderRadius: "0.25rem",
+                marginBottom: "0.5rem",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "#9ca3af",
+                minWidth: "800px",
               }}
             >
-              <tbody>
-                <tr>
-                  <td style={{ textAlign: "left", verticalAlign: "middle" }}>
-                    <h2 className="section-title">
-                      ■ 登録プレイヤー ({players.length}/10)
-                    </h2>
-                  </td>
-                  <td
-                    style={{
-                      textAlign: "right",
-                      verticalAlign: "middle",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    <button
-                      onClick={() => setSortType("none")}
-                      className={
-                        sortType === "none"
-                          ? "sort-button-active"
-                          : "sort-button-inactive"
-                      }
-                      style={{ marginLeft: "0.5rem" }}
-                    >
-                      追加順
-                    </button>
-                    <button
-                      onClick={() => setSortType("rating-high")}
-                      className={
-                        sortType === "rating-high"
-                          ? "sort-button-active"
-                          : "sort-button-inactive"
-                      }
-                      style={{ marginLeft: "0.5rem" }}
-                    >
-                      ランク高い順
-                    </button>
-                    <button
-                      onClick={() => setSortType("rating-low")}
-                      className={
-                        sortType === "rating-low"
-                          ? "sort-button-active"
-                          : "sort-button-inactive"
-                      }
-                      style={{ marginLeft: "0.5rem" }}
-                    >
-                      ランク低い順
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* 説明文を追加 */}
-            <div className="rounded-lg p-3 mb-4 border info-box">
-              <p className="text-blue-200 text-sm">💡使い方</p>
-              <p className="text-blue-200 text-sm">
-                &nbsp;&nbsp;&nbsp;&nbsp;●
-                過去最高ランクと差がある場合、選択されてる「ランク」を調整してください。
-              </p>
-              {gameMode === "summoners-rift" && (
-                <>
-                  <p className="text-blue-200 text-sm">
-                    &nbsp;&nbsp;&nbsp;&nbsp;●
-                    「各ロール」ボタンを選択すると希望ロールを優先しつつ、必要に応じて他ロールにも割り当てます。
-                  </p>
-                  <p className="text-blue-200 text-sm">
-                    &nbsp;&nbsp;&nbsp;&nbsp;●
-                    「選択ロール最優先」を選択すると、選択したロール以外には割り当てられなくなります。
-                  </p>
-                </>
-              )}
-            </div>
-
+              <div style={{ width: "40px", flexShrink: 0 }}></div>
+              <div
+                style={{
+                  width: "150px",
+                  flexShrink: 0,
+                  marginLeft: "0.5rem",
+                }}
+              >
+                サモナー名
+              </div>
+                <div
+                  className={`sort-header-rank ${
+                    sortType !== "none" ? "sort-header-rank-active" : ""
+                  }`}
+                  onClick={() => {
+                    if (sortType === "rating-high") {
+                      setSortType("rating-low");
+                    } else if (sortType === "rating-low") {
+                      setSortType("none");
+                    } else {
+                      setSortType("rating-high");
+                    }
+                  }}
+                  title="クリックでソート切替"
+                >
+                  <span className="sort-header-label">ランク</span>
+                  <span className="sort-header-icon">
+                    {sortType === "rating-high" && "▼"}
+                    {sortType === "rating-low" && "▲"}
+                    {sortType === "none" && "⇅"}
+                  </span>
+                </div>
+                {gameMode === "summoners-rift" && (
+                  <div style={{ flex: 1, marginLeft: "0.75rem" }}>
+                    希望ロール
+                  </div>
+                )}
+                <div style={{ marginLeft: "auto", paddingRight: "0.5rem", textAlign: "center" }}>
+                  操作
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               {sortedPlayers.map((player) => (
-                <div key={player.id} className="player-card-registration">
-                  <div className="player-card-registration-flex">
-                    {" "}
-                    {/* プロフィールアイコン */}
-                    <img
-                      src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
-                        player.profileIcon || 29
-                      }.png`}
-                      alt="Profile Icon"
-                      className="profile-icon-registration"
-                      onError={(e) => {
-                        e.currentTarget.src =
-                          "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
+                <div
+                  key={player.id}
+                  data-player-id={player.id}
+                  className={`player-card-registration ${
+                    player.isFixed && players.length > 10 ? "pinned" : ""
+                  } ${player.strictRoleMatch ? "role-locked" : ""}`}
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between", // flex-start → space-between に変更
+                    gap: "0.75rem",
+                    flexWrap: "nowrap", // wrap → nowrap に変更
+                    position: "relative",
+                  }}
+                >
+                  {/* 左側グループ: アイコン + 名前 + ランク + ロール */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      flex: 1,
+                      minWidth: 0, // テキスト省略のため
+                    }}
+                  >
+                    {/* プロフィールアイコン + サモナー名 */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        flexShrink: 0,
                       }}
-                    />
-                    <span className="summoner-name-registration">
-                      {" "}
-                      {player.summonerName}#{player.tag}
-                    </span>
+                    >
+                      <img
+                        src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
+                          player.profileIcon || 29
+                        }.png`}
+                        alt="Profile Icon"
+                        className="profile-icon-registration"
+                        onError={(e) => {
+                          e.currentTarget.src =
+                            "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
+                        }}
+                      />
+                      <span className="summoner-name-registration">
+                        {player.summonerName}#{player.tag}
+                      </span>
+                    </div>
+
+                    {/* ランク選択 */}
                     <select
                       value={
                         player.rank
@@ -1890,6 +2372,7 @@ ${redTeamText}`;
                         changePlayerRank(player.id, newTier, newRank);
                       }}
                       className="rank-select-registration"
+                      style={{ flexShrink: 0 }}
                     >
                       {RANK_OPTIONS.map((option) => (
                         <option
@@ -1904,115 +2387,466 @@ ${redTeamText}`;
                         </option>
                       ))}
                     </select>
-                    {/* ロール選択ボタン部分を条件付きレンダリング */}
+
+                    {/* 希望ロール */}
                     {gameMode === "summoners-rift" && (
-                      <>
-                        <div className="flex gap-1">
-                          {ROLES.map((role) => {
-                            const isSelected =
-                              player.preferredRoles.includes(role);
-                            return (
-                              <button
-                                key={role}
-                                onClick={() =>
-                                  togglePlayerRole(player.id, role)
-                                }
-                                className={
-                                  isSelected
-                                    ? "role-button-registration-selected"
-                                    : "role-button-registration-unselected"
-                                }
-                              >
-                                <RoleIcon role={role} size={12} />
-                                {role}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label
-                            className="flex items-center gap-1 cursor-pointer"
-                            style={{
-                              fontSize: "0.75rem",
-                              color: player.strictRoleMatch
-                                ? "#0A84FF"
-                                : "#999",
-                              userSelect: "none",
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={player.strictRoleMatch}
-                              onChange={() => toggleStrictRoleMatch(player.id)}
-                              style={{
-                                width: "14px",
-                                height: "14px",
-                                cursor: "pointer",
-                                accentColor: "#0A84FF",
-                              }}
-                            />
-                            <span>選択ﾛｰﾙ最優先</span>
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => toggleAllRoles(player.id)}
-                            className={
-                              player.preferredRoles.length === ROLES.length
-                                ? "toggle-all-button-deselect"
-                                : "toggle-all-button-select"
-                            }
-                          >
-                            {player.preferredRoles.length === ROLES.length
-                              ? "全解除"
-                              : "全選択"}
-                          </button>
-                        </div>
-                      </>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {ROLES.map((role) => {
+                          const isSelected =
+                            player.preferredRoles.includes(role);
+                          return (
+                            <button
+                              key={role}
+                              onClick={() => togglePlayerRole(player.id, role)}
+                              className={
+                                isSelected
+                                  ? "role-button-registration-selected"
+                                  : "role-button-registration-unselected"
+                              }
+                            >
+                              <RoleIcon role={role} size={12} />
+                              {role}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
-                  <button
-                    onClick={() => removePlayer(player.id)}
-                    className="text-red-400 hover:text-red-300 p-2"
+
+                  {/* 右側グループ: バッジ + ボタン群 */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      flexShrink: 0,
+                    }}
                   >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                    {/* ボタン群 */}
+                    {gameMode === "summoners-rift" &&
+                      player.preferredRoles.length > 0 &&
+                      player.preferredRoles.length < ROLES.length && (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: "2px",
+                          }}
+                        >
+                          <button
+                            className={`btn-small btn-role-lock ${
+                              player.strictRoleMatch ? "locked" : ""
+                            }`}
+                            onClick={() => toggleStrictRoleMatch(player.id)}
+                            title={
+                              player.strictRoleMatch
+                                ? "希望ロール最優先を解除"
+                                : "希望ロール最優先にする"
+                            }
+                          >
+                            {player.strictRoleMatch ? "🔒" : "🔓"}
+                          </button>
+                          <span
+                            style={{
+                              fontSize: "0.5rem",
+                              color: "#9ca3af",
+                              lineHeight: 1,
+                            }}
+                          >
+                            希望ロール最優先
+                          </span>
+                        </div>
+                      )}
+                    {players.length > 10 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "2px",
+                        }}
+                      >
+                        <button
+                          className={`btn-small btn-pin ${
+                            player.isFixed && players.length > 10
+                              ? "pinned"
+                              : ""
+                          }`}
+                          onClick={() => toggleFixedPlayer(player.id)}
+                          title={
+                            player.isFixed ? "参加確定解除" : "参加確定する"
+                          }
+                        >
+                          {player.isFixed ? "📌" : "📍"}
+                        </button>
+                        <span
+                          style={{
+                            fontSize: "0.5rem",
+                            color: "#9ca3af",
+                            lineHeight: 1,
+                          }}
+                        >
+                          参加確定
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 観戦ボタン */}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "2px",
+                      }}
+                    >
+                      <button
+                        className="btn-small btn-watch"
+                        onClick={() => moveToObserver(player.id)}
+                        title="観戦へ移動"
+                      >
+                        👀
+                      </button>
+                      <span
+                        style={{
+                          fontSize: "0.5rem",
+                          color: "#9ca3af",
+                          lineHeight: 1,
+                        }}
+                      >
+                        観戦へ
+                      </span>
+                    </div>
+                    {/* 削除ボタン */}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "2px",
+                      }}
+                    >
+                      <button
+                        className="btn-small btn-remove"
+                        onClick={() => removePlayer(player.id)}
+                        title="削除"
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{
+                            display: "block",
+                          }}
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                      <span
+                        style={{
+                          fontSize: "0.5rem",
+                          color: "#9ca3af",
+                          lineHeight: 1,
+                        }}
+                      >
+                        削除
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
-            <button
-              onClick={createTeams}
-              disabled={
-                gameMode === "summoners-rift"
-                  ? players.length !== 10
-                  : players.length < 2
-              }
-              className={`create-teams-button ${
-                (gameMode === "summoners-rift" && players.length === 10) ||
-                (gameMode === "aram" && players.length >= 2)
-                  ? "create-teams-button-enabled"
-                  : "create-teams-button-disabled"
-              }`}
-            >
-              <Shuffle className="w-5 h-5" />
-              チーム分け実行{" "}
-              {gameMode === "summoners-rift" &&
-                players.length !== 10 &&
-                `(${10 - players.length}人不足)`}
-              {gameMode === "aram" && players.length < 2 && `(最低2人必要)`}
-            </button>
+            {observerPlayers.length > 0 && (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <h2 className="section-title" style={{ marginTop: 25 }}>
+                    👀️ 観戦 ({observerPlayers.length}人)
+                  </h2>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "0.5rem 0.75rem",
+                    background: "rgba(100, 100, 100, 0.2)",
+                    borderRadius: "0.25rem",
+                    marginBottom: "0.5rem",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "#9ca3af",
+                  }}
+                >
+                  <div style={{ width: "40px", flexShrink: 0 }}></div>
+                  <div
+                    style={{
+                      width: "150px",
+                      flexShrink: 0,
+                      marginLeft: "0.5rem",
+                    }}
+                  >
+                    サモナー名
+                  </div>
+                  <div
+                    className={`sort-header-rank ${
+                      sortType !== "none" ? "sort-header-rank-active" : ""
+                    }`}
+                    onClick={() => {
+                      if (sortType === "rating-high") {
+                        setSortType("rating-low");
+                      } else if (sortType === "rating-low") {
+                        setSortType("none");
+                      } else {
+                        setSortType("rating-high");
+                      }
+                    }}
+                    title="クリックでソート切替"
+                  >
+                    <span className="sort-header-label">ランク</span>
+                    <span className="sort-header-icon">
+                      {sortType === "rating-high" && "▼"}
+                      {sortType === "rating-low" && "▲"}
+                      {sortType === "none" && "⇅"}
+                    </span>
+                  </div>
+                  {gameMode === "summoners-rift" && (
+                    <div style={{ flex: 1, marginLeft: "0.75rem" }}>
+                      希望ロール
+                    </div>
+                  )}
+                  <div style={{ marginLeft: "auto", paddingRight: "0.5rem", textAlign: "center" }}>
+                    操作
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="space-y-2">
+              {(() => {
+                const sorted = [...observerPlayers];
+                switch (sortType) {
+                  case "name":
+                    return sorted.sort((a, b) => {
+                      const nameA = `${a.summonerName}#${a.tag}`.toLowerCase();
+                      const nameB = `${b.summonerName}#${b.tag}`.toLowerCase();
+                      return nameA.localeCompare(nameB);
+                    });
+                  case "rating-high":
+                    return sorted.sort((a, b) => b.rating - a.rating);
+                  case "rating-low":
+                    return sorted.sort((a, b) => a.rating - b.rating);
+                  default:
+                    return sorted;
+                }
+              })().map((player) => (
+                <div
+                  key={player.id}
+                  data-observer-id={player.id}
+                  className="player-card-registration"
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "flex-start",
+                    gap: "0.75rem",
+                    flexWrap: "nowrap",
+                  }}
+                >
+                  {/* 左側: アイコンとサモナー名 */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img
+                      src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
+                        player.profileIcon || 29
+                      }.png`}
+                      alt="Profile Icon"
+                      className="profile-icon-registration"
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
+                      }}
+                    />
+                    <span className="summoner-name-registration">
+                      {player.summonerName}#{player.tag}
+                    </span>
+                  </div>
+
+                  {/* ランク選択 */}
+                  <select
+                    value={
+                      player.rank
+                        ? `${player.tier}-${player.rank}`
+                        : player.tier
+                    }
+                    onChange={(e) => {
+                      const [newTier, newRank] = e.target.value.split("-");
+                      changePlayerRank(player.id, newTier, newRank);
+                    }}
+                    className="rank-select-registration"
+                    style={{ flexShrink: 0 }}
+                  >
+                    {RANK_OPTIONS.map((option) => (
+                      <option
+                        key={`${option.tier}-${option.rank}`}
+                        value={
+                          option.rank
+                            ? `${option.tier}-${option.rank}`
+                            : option.tier
+                        }
+                      >
+                        {option.display}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* 希望ロール選択 */}
+                  {gameMode === "summoners-rift" && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.25rem",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {ROLES.map((role) => {
+                        const isSelected = player.preferredRoles.includes(role);
+                        return (
+                          <button
+                            key={role}
+                            onClick={() => togglePlayerRole(player.id, role)}
+                            className={
+                              isSelected
+                                ? "role-button-registration-selected"
+                                : "role-button-registration-unselected"
+                            }
+                          >
+                            <RoleIcon role={role} size={12} />
+                            {role}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* 右側: ボタン */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.5rem",
+                      marginLeft: "auto",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {/* 参加へボタン */}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "2px",
+                      }}
+                    >
+                      <button
+                        onClick={() => moveToPlaying(player.id)}
+                        className="btn-small"
+                        style={{
+                          background: "#16a34a",
+                          color: "white",
+                          padding: "0.5rem",
+                          borderRadius: "6px",
+                          border: "none",
+                          cursor: "pointer",
+                          minWidth: "36px",
+                        }}
+                        title="参加へ"
+                      >
+                        👥
+                      </button>
+                      <span
+                        style={{
+                          fontSize: "0.5rem",
+                          color: "#9ca3af",
+                          lineHeight: 1,
+                        }}
+                      >
+                        参加へ
+                      </span>
+                    </div>
+
+                    {/* 削除ボタン */}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "2px",
+                      }}
+                    >
+                      <button
+                        onClick={() => removePlayer(player.id)}
+                        className="btn-small btn-remove"
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{
+                            display: "block",
+                          }}
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                      <span
+                        style={{
+                          fontSize: "0.5rem",
+                          color: "#9ca3af",
+                          lineHeight: 1,
+                        }}
+                      >
+                        削除
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
             <AdBanner slot="9876543210" format="horizontal" />
           </div>
         )}
-
         {result && (
           <div className="result-modal-overlay">
-            <div
-              id="team-result-container"
-              className={`result-container ${
-                gameMode === "aram" ? "result-container-aram" : ""
-              }`}
-            >
+            <div id="team-result-container" className="result-container">
               <table
                 style={{
                   width: "100%",
@@ -2048,96 +2882,108 @@ ${redTeamText}`;
                 <div className="blue-team-card">
                   <h3 className="blue-team-title">ブルーチーム</h3>
                   <p className="avg-rank-text">
-                    チームの平均ランク: {result.avgTier1.tier}{" "}
-                    {result.avgTier1.rank}
+                    平均ランク: {result.avgTier1.tier} {result.avgTier1.rank}
                   </p>
                   <div className="space-y-1.5">
-                    {result.blueTeam.map((player) => (
-                      <div
-                        key={player.id}
-                        className="rounded p-2 blue-player-card"
-                      >
-                        <table className="player-card-inner-table">
-                          <tbody>
-                            <tr className="player-card-inner-row">
-                              {/* ロールアイコンセル */}
-                              {gameMode === "summoners-rift" && (
-                                <td className="player-card-cell-role-icon blue-role-icon">
-                                  <RoleIcon
-                                    role={player.assignedRole!}
-                                    size={24}
+                    {ROLES.map((role) => {
+                      const player = result.blueTeam.find(
+                        (p) => p.assignedRole === role
+                      );
+                      if (!player) return null;
+
+                      return (
+                        <div
+                          key={role}
+                          draggable
+                          onDragStart={(e) =>
+                            handleDragStart(player, "blue", role, e)
+                          }
+                          onDragOver={(e) => handleDragOver(e, "blue", role)}
+                          onDragLeave={handleDragLeave}
+                          onDragEnd={handleDragEnd}
+                          onDrop={(e) => handleDrop("blue", role, e)}
+                          className="rounded p-2 blue-player-card player-card-draggable drop-zone-ready"
+                        >
+                          <span className="drag-hint">🖱️ ドラッグして移動</span>
+                          <table className="player-card-inner-table">
+                            <tbody>
+                              <tr className="player-card-inner-row">
+                                {/* ロールアイコンセル */}
+                                {gameMode === "summoners-rift" && (
+                                  <td className="player-card-cell-role-icon blue-role-icon">
+                                    <RoleIcon
+                                      role={player.assignedRole!}
+                                      size={20}
+                                    />
+                                  </td>
+                                )}
+                                {/* プロフィール画像とサモナー名 */}
+                                <td className="player-card-cell-profile">
+                                  <img
+                                    src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
+                                      player.profileIcon || 29
+                                    }.png`}
+                                    alt="Profile Icon"
+                                    className="blue-profile-icon"
+                                    onError={(e) => {
+                                      e.currentTarget.src =
+                                        "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
+                                    }}
                                   />
+                                  <span className="summoner-name">
+                                    {player.summonerName}
+                                  </span>
                                 </td>
-                              )}
-                              {/* プロフィール画像とサモナー名 */}
-                              <td className="player-card-cell-profile">
-                                <img
-                                  src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
-                                    player.profileIcon || 29
-                                  }.png`}
-                                  alt="Profile Icon"
-                                  className="blue-profile-icon"
-                                  onError={(e) => {
-                                    e.currentTarget.src =
-                                      "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
-                                  }}
-                                />
-                                <span className="summoner-name">
-                                  {player.summonerName.length > 12
-                                    ? player.summonerName.substring(0, 11) +
-                                      "..."
-                                    : player.summonerName}
-                                </span>
-                              </td>
 
-                              {/* プレイヤー情報 */}
-                              <td className="player-card-cell-info">
-                                <div>
-                                  {/* 割り当てられたロール */}
-                                  {gameMode === "summoners-rift" && (
-                                    <div className="role-assignment-row">
-                                      <span className="blue-assigned-role">
-                                        {player.assignedRole}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {/* ランク情報 */}
-                                  <div className="rank-info">
-                                    <div>
-                                      {player.tier} {player.rank}
-                                    </div>
-                                  </div>
-
-                                  {/* 希望ロール一覧 */}
-
-                                  {gameMode === "summoners-rift" && (
-                                    <div className="preferred-roles-container">
-                                      {player.preferredRoles.map((role) => (
-                                        <span
-                                          key={role}
-                                          className={`preferred-role-badge ${
-                                            role === player.assignedRole
-                                              ? "blue-preferred-role-active"
-                                              : "blue-preferred-role-inactive"
-                                          }`}
-                                        >
-                                          <span className="role-icon-container">
-                                            <RoleIcon role={role} size={12} />
-                                          </span>
-                                          <span className="role-text">
-                                            {role}
-                                          </span>
+                                {/* プレイヤー情報 */}
+                                <td className="player-card-cell-info">
+                                  <div>
+                                    {/* 割り当てられたロール */}
+                                    {gameMode === "summoners-rift" && (
+                                      <div className="role-assignment-row">
+                                        <span className="blue-assigned-role">
+                                          {player.assignedRole}
                                         </span>
-                                      ))}
+                                      </div>
+                                    )}
+                                    {/* ランク情報 */}
+                                    <div className="rank-info">
+                                      <div>
+                                        {player.tier} {player.rank}
+                                      </div>
                                     </div>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
+
+                                    {/* 希望ロール一覧 */}
+
+                                    {gameMode === "summoners-rift" && (
+                                      <div className="preferred-roles-container">
+                                        {player.preferredRoles.map((role) => (
+                                          <span
+                                            key={role}
+                                            className={`preferred-role-badge ${
+                                              role === player.assignedRole
+                                                ? "blue-preferred-role-active"
+                                                : "blue-preferred-role-inactive"
+                                            }`}
+                                          >
+                                            <span className="role-icon-container">
+                                              <RoleIcon role={role} size={12} />
+                                            </span>
+                                            <span className="role-text">
+                                              {role}
+                                            </span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -2145,97 +2991,109 @@ ${redTeamText}`;
                 <div className="red-team-card">
                   <h3 className="red-team-title">レッドチーム</h3>
                   <p className="avg-rank-text">
-                    チームの平均ランク: {result.avgTier2.tier}{" "}
-                    {result.avgTier2.rank}
+                    平均ランク: {result.avgTier2.tier} {result.avgTier2.rank}
                   </p>
                   <div className="space-y-1.5">
-                    {result.redTeam.map((player) => (
-                      <div
-                        key={player.id}
-                        className="rounded p-2 red-player-card"
-                      >
-                        <table className="player-card-inner-table">
-                          <tbody>
-                            <tr className="player-card-inner-row">
-                              {/* ロールアイコン */}
+                    {ROLES.map((role) => {
+                      const player = result.redTeam.find(
+                        (p) => p.assignedRole === role
+                      );
+                      if (!player) return null;
 
-                              {gameMode === "summoners-rift" && (
-                                <td className="player-card-cell-role-icon red-role-icon">
-                                  <RoleIcon
-                                    role={player.assignedRole!}
-                                    size={24}
+                      return (
+                        <div
+                          key={role}
+                          draggable
+                          onDragStart={(e) =>
+                            handleDragStart(player, "red", role, e)
+                          }
+                          onDragOver={(e) => handleDragOver(e, "red", role)}
+                          onDragLeave={handleDragLeave}
+                          onDragEnd={handleDragEnd}
+                          onDrop={(e) => handleDrop("red", role, e)}
+                          className="rounded p-2 red-player-card player-card-draggable drop-zone-ready"
+                        >
+                          <span className="drag-hint">🖱️ ドラッグして移動</span>
+                          <table className="player-card-inner-table">
+                            <tbody>
+                              <tr className="player-card-inner-row">
+                                {/* ロールアイコン */}
+
+                                {gameMode === "summoners-rift" && (
+                                  <td className="player-card-cell-role-icon red-role-icon">
+                                    <RoleIcon
+                                      role={player.assignedRole!}
+                                      size={20}
+                                    />
+                                  </td>
+                                )}
+                                {/* プロフィール画像とサモナー名 */}
+                                <td className="player-card-cell-profile">
+                                  <img
+                                    src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
+                                      player.profileIcon || 29
+                                    }.png`}
+                                    alt="Profile Icon"
+                                    className="red-profile-icon"
+                                    onError={(e) => {
+                                      e.currentTarget.src =
+                                        "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
+                                    }}
                                   />
+                                  <span className="summoner-name">
+                                    {player.summonerName}
+                                  </span>
                                 </td>
-                              )}
-                              {/* プロフィール画像とサモナー名 */}
-                              <td className="player-card-cell-profile">
-                                <img
-                                  src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
-                                    player.profileIcon || 29
-                                  }.png`}
-                                  alt="Profile Icon"
-                                  className="red-profile-icon"
-                                  onError={(e) => {
-                                    e.currentTarget.src =
-                                      "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
-                                  }}
-                                />
-                                <span className="summoner-name">
-                                  {player.summonerName.length > 11
-                                    ? player.summonerName.substring(0, 10) +
-                                      "..."
-                                    : player.summonerName}
-                                </span>
-                              </td>
 
-                              {/* プレイヤー情報 */}
-                              <td className="player-card-cell-info">
-                                <div>
-                                  {/* 割り当てられたロール */}
-                                  {gameMode === "summoners-rift" && (
-                                    <div className="role-assignment-row">
-                                      <span className="red-assigned-role">
-                                        {player.assignedRole}
-                                      </span>
-                                    </div>
-                                  )}
-
-                                  {/* ランク情報 */}
-                                  <div className="rank-info">
-                                    <div>
-                                      {player.tier} {player.rank}
-                                    </div>
-                                  </div>
-
-                                  {/* 希望ロール一覧 */}
-                                  {gameMode === "summoners-rift" && (
-                                    <div className="preferred-roles-container">
-                                      {player.preferredRoles.map((role) => (
-                                        <span
-                                          key={role}
-                                          className={`preferred-role-badge ${
-                                            role === player.assignedRole
-                                              ? "red-preferred-role-active"
-                                              : "red-preferred-role-inactive"
-                                          }`}
-                                        >
-                                          <span className="role-icon-container">
-                                            <RoleIcon role={role} size={12} />
-                                          </span>
-                                          <span className="role-text">
-                                            {role}
-                                          </span>
+                                {/* プレイヤー情報 */}
+                                <td className="player-card-cell-info">
+                                  <div>
+                                    {/* 割り当てられたロール */}
+                                    {gameMode === "summoners-rift" && (
+                                      <div className="role-assignment-row">
+                                        <span className="red-assigned-role">
+                                          {player.assignedRole}
                                         </span>
-                                      ))}
+                                      </div>
+                                    )}
+
+                                    {/* ランク情報 */}
+                                    <div className="rank-info">
+                                      <div>
+                                        {player.tier} {player.rank}
+                                      </div>
                                     </div>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
+
+                                    {/* 希望ロール一覧 */}
+                                    {gameMode === "summoners-rift" && (
+                                      <div className="preferred-roles-container">
+                                        {player.preferredRoles.map((role) => (
+                                          <span
+                                            key={role}
+                                            className={`preferred-role-badge ${
+                                              role === player.assignedRole
+                                                ? "red-preferred-role-active"
+                                                : "red-preferred-role-inactive"
+                                            }`}
+                                          >
+                                            <span className="role-icon-container">
+                                              <RoleIcon role={role} size={12} />
+                                            </span>
+                                            <span className="role-text">
+                                              {role}
+                                            </span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -2246,23 +3104,12 @@ ${redTeamText}`;
                     <tr className="button-area-row">
                       <td className="button-area-cell">
                         <button
-                          onClick={copyResultAsText}
-                          className="action-button"
-                          style={{ width: "100%", display: "block" }}
-                        >
-                          <span style={{ display: "inline-block" }}>
-                            📋 結果をテキストでコピー
-                          </span>
-                        </button>
-                      </td>
-                      <td className="button-area-cell">
-                        <button
                           onClick={copyResultToClipboard}
                           className="action-button"
                           style={{ width: "100%", display: "block" }}
                         >
                           <span style={{ display: "inline-block" }}>
-                            📋 結果を画像でコピー
+                            📋 クリップボードにコピー
                           </span>
                           <span
                             className="action-button-beta"
