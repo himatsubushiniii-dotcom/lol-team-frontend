@@ -2268,7 +2268,7 @@ export default function LoLTeamMaker(): JSX.Element {
               <div style={{ width: "40px", flexShrink: 0 }}></div>
               <div
                 style={{
-                  width: "150px",
+                  width: "115px",
                   flexShrink: 0,
                   marginLeft: "0.5rem",
                 }}
@@ -2599,7 +2599,7 @@ export default function LoLTeamMaker(): JSX.Element {
                   <div style={{ width: "40px", flexShrink: 0 }}></div>
                   <div
                     style={{
-                      width: "150px",
+                      width: "115px",
                       flexShrink: 0,
                       marginLeft: "0.5rem",
                     }}
