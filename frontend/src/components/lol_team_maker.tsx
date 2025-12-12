@@ -968,7 +968,6 @@ export default function LoLTeamMaker(): JSX.Element {
 
   // ランダム10人選出
   const selectRandom10Players = (): void => {
-
     const fixedPlayers = players.filter((p) => p.isFixed);
     const flexiblePlayers = players.filter((p) => !p.isFixed);
 
@@ -2085,27 +2084,21 @@ export default function LoLTeamMaker(): JSX.Element {
                 className="btn"
                 style={{
                   background:
-                    players.length <　11
+                    players.length < 11
                       ? "rgba(100, 100, 100, 0.3)"
                       : "linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)",
                   border:
-                    players.length <　11
+                    players.length < 11
                       ? "2px solid rgba(100, 100, 100, 0.5)"
                       : "2px solid #9333ea",
                   boxShadow:
-                    players.length <　11
+                    players.length < 11
                       ? "none"
                       : "0 0 20px rgba(147, 51, 234, 0.5)",
-                  color:
-                    players.length <　11
-                      ? "#666"
-                      : "white",
+                  color: players.length < 11 ? "#666" : "white",
                   padding: "0.5rem 1rem",
                   fontSize: "0.875rem",
-                  cursor:
-                    players.length <　11
-                      ? "not-allowed"
-                      : "pointer",
+                  cursor: players.length < 11 ? "not-allowed" : "pointer",
                 }}
               >
                 🎲 ランダム10人選出
@@ -2241,7 +2234,7 @@ export default function LoLTeamMaker(): JSX.Element {
                         style={{ textAlign: "left", verticalAlign: "middle" }}
                       >
                         <h2 className="section-title">
-                           メンバー一覧 (👥参加者{players.length}人、👀観戦者
+                          メンバー一覧 (👥参加者{players.length}人、👀観戦者
                           {observerPlayers.length}人)
                         </h2>
                       </td>
@@ -2251,349 +2244,19 @@ export default function LoLTeamMaker(): JSX.Element {
               </div>
             )}
             {players.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "0.5rem 0.75rem",
-                background: "rgba(100, 100, 100, 0.2)",
-                borderRadius: "0.25rem",
-                marginBottom: "0.5rem",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: "#9ca3af",
-                minWidth: "800px",
-              }}
-            >
-              <div style={{ width: "40px", flexShrink: 0 }}></div>
-              <div
-                style={{
-                  width: "115px",
-                  flexShrink: 0,
-                  marginLeft: "0.5rem",
-                }}
-              >
-                サモナー名
-              </div>
-                <div
-                  className={`sort-header-rank ${
-                    sortType !== "none" ? "sort-header-rank-active" : ""
-                  }`}
-                  onClick={() => {
-                    if (sortType === "rating-high") {
-                      setSortType("rating-low");
-                    } else if (sortType === "rating-low") {
-                      setSortType("none");
-                    } else {
-                      setSortType("rating-high");
-                    }
-                  }}
-                  title="クリックでソート切替"
-                >
-                  <span className="sort-header-label">ランク</span>
-                  <span className="sort-header-icon">
-                    {sortType === "rating-high" && "▼"}
-                    {sortType === "rating-low" && "▲"}
-                    {sortType === "none" && "⇅"}
-                  </span>
-                </div>
-                {gameMode === "summoners-rift" && (
-                  <div style={{ flex: 1, marginLeft: "0.75rem" }}>
-                    希望ロール
-                  </div>
-                )}
-                <div style={{ marginLeft: "auto", paddingRight: "0.5rem", textAlign: "center" }}>
-                  操作
-                </div>
-              </div>
-            )}
-            <div className="space-y-2">
-              {sortedPlayers.map((player) => (
-                <div
-                  key={player.id}
-                  data-player-id={player.id}
-                  className={`player-card-registration ${
-                    player.isFixed && players.length > 10 ? "pinned" : ""
-                  } ${player.strictRoleMatch ? "role-locked" : ""}`}
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between", // flex-start → space-between に変更
-                    gap: "0.75rem",
-                    flexWrap: "nowrap", // wrap → nowrap に変更
-                    position: "relative",
-                  }}
-                >
-                  {/* 左側グループ: アイコン + 名前 + ランク + ロール */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.75rem",
-                      flex: 1,
-                      minWidth: 0, // テキスト省略のため
-                    }}
-                  >
-                    {/* プロフィールアイコン + サモナー名 */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <img
-                        src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
-                          player.profileIcon || 29
-                        }.png`}
-                        alt="Profile Icon"
-                        className="profile-icon-registration"
-                        onError={(e) => {
-                          e.currentTarget.src =
-                            "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
-                        }}
-                      />
-                      <span className="summoner-name-registration">
-                        {player.summonerName}#{player.tag}
-                      </span>
-                    </div>
-
-                    {/* ランク選択 */}
-                    <select
-                      value={
-                        player.rank
-                          ? `${player.tier}-${player.rank}`
-                          : player.tier
-                      }
-                      onChange={(e) => {
-                        const [newTier, newRank] = e.target.value.split("-");
-                        changePlayerRank(player.id, newTier, newRank);
-                      }}
-                      className="rank-select-registration"
-                      style={{ flexShrink: 0 }}
-                    >
-                      {RANK_OPTIONS.map((option) => (
-                        <option
-                          key={`${option.tier}-${option.rank}`}
-                          value={
-                            option.rank
-                              ? `${option.tier}-${option.rank}`
-                              : option.tier
-                          }
-                        >
-                          {option.display}
-                        </option>
-                      ))}
-                    </select>
-
-                    {/* 希望ロール */}
-                    {gameMode === "summoners-rift" && (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.25rem",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {ROLES.map((role) => {
-                          const isSelected =
-                            player.preferredRoles.includes(role);
-                          return (
-                            <button
-                              key={role}
-                              onClick={() => togglePlayerRole(player.id, role)}
-                              className={
-                                isSelected
-                                  ? "role-button-registration-selected"
-                                  : "role-button-registration-unselected"
-                              }
-                            >
-                              <RoleIcon role={role} size={12} />
-                              {role}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 右側グループ: バッジ + ボタン群 */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {/* ボタン群 */}
-                    {gameMode === "summoners-rift" &&
-                      player.preferredRoles.length > 0 &&
-                      player.preferredRoles.length < ROLES.length && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: "2px",
-                          }}
-                        >
-                          <button
-                            className={`btn-small btn-role-lock ${
-                              player.strictRoleMatch ? "locked" : ""
-                            }`}
-                            onClick={() => toggleStrictRoleMatch(player.id)}
-                            title={
-                              player.strictRoleMatch
-                                ? "希望ロール最優先を解除"
-                                : "希望ロール最優先にする"
-                            }
-                          >
-                            {player.strictRoleMatch ? "🔒" : "🔓"}
-                          </button>
-                          <span
-                            style={{
-                              fontSize: "0.5rem",
-                              color: "#9ca3af",
-                              lineHeight: 1,
-                            }}
-                          >
-                            希望ロール最優先
-                          </span>
-                        </div>
-                      )}
-                    {players.length > 10 && (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          gap: "2px",
-                        }}
-                      >
-                        <button
-                          className={`btn-small btn-pin ${
-                            player.isFixed && players.length > 10
-                              ? "pinned"
-                              : ""
-                          }`}
-                          onClick={() => toggleFixedPlayer(player.id)}
-                          title={
-                            player.isFixed ? "参加確定解除" : "参加確定する"
-                          }
-                        >
-                          {player.isFixed ? "📌" : "📍"}
-                        </button>
-                        <span
-                          style={{
-                            fontSize: "0.5rem",
-                            color: "#9ca3af",
-                            lineHeight: 1,
-                          }}
-                        >
-                          参加確定
-                        </span>
-                      </div>
-                    )}
-
-                    {/* 観戦ボタン */}
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "2px",
-                      }}
-                    >
-                      <button
-                        className="btn-small btn-watch"
-                        onClick={() => moveToObserver(player.id)}
-                        title="観戦へ移動"
-                      >
-                        👀
-                      </button>
-                      <span
-                        style={{
-                          fontSize: "0.5rem",
-                          color: "#9ca3af",
-                          lineHeight: 1,
-                        }}
-                      >
-                        観戦へ
-                      </span>
-                    </div>
-                    {/* 削除ボタン */}
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "2px",
-                      }}
-                    >
-                      <button
-                        className="btn-small btn-remove"
-                        onClick={() => removePlayer(player.id)}
-                        title="削除"
-                      >
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          style={{
-                            display: "block",
-                          }}
-                        >
-                          <line x1="18" y1="6" x2="6" y2="18"></line>
-                          <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                      </button>
-                      <span
-                        style={{
-                          fontSize: "0.5rem",
-                          color: "#9ca3af",
-                          lineHeight: 1,
-                        }}
-                      >
-                        削除
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {observerPlayers.length > 0 && (
-              <>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <h2 className="section-title" style={{ marginTop: 25 }}>
-                    👀️ 観戦 ({observerPlayers.length}人)
-                  </h2>
-                </div>
+              <div className="players-list-wrapper">
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    padding: "0.5rem 0.75rem",
+                    padding: "0rem 0.75rem",
                     background: "rgba(100, 100, 100, 0.2)",
                     borderRadius: "0.25rem",
                     marginBottom: "0.5rem",
                     fontSize: "0.75rem",
                     fontWeight: 600,
                     color: "#9ca3af",
+                    minWidth: "800px",
                   }}
                 >
                   <div style={{ width: "40px", flexShrink: 0 }}></div>
@@ -2633,214 +2296,572 @@ export default function LoLTeamMaker(): JSX.Element {
                       希望ロール
                     </div>
                   )}
-                  <div style={{ marginLeft: "auto", paddingRight: "0.5rem", textAlign: "center" }}>
+                  <div
+                    style={{
+                      marginLeft: "auto",
+                      paddingRight: "0.5rem",
+                      textAlign: "center",
+                    }}
+                  >
                     操作
                   </div>
                 </div>
-              </>
+
+                <div className="space-y-2">
+                  {sortedPlayers.map((player) => (
+                    <div
+                      key={player.id}
+                      data-player-id={player.id}
+                      className={`player-card-registration ${
+                        player.isFixed && players.length > 10 ? "pinned" : ""
+                      } ${player.strictRoleMatch ? "role-locked" : ""}`}
+                      style={{
+                        display: "flex",
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between", // flex-start → space-between に変更
+                        gap: "0.75rem",
+                        flexWrap: "nowrap", // wrap → nowrap に変更
+                        position: "relative",
+                      }}
+                    >
+                      {/* 左側グループ: アイコン + 名前 + ランク + ロール */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                          flex: 1,
+                          minWidth: 0, // テキスト省略のため
+                        }}
+                      >
+                        {/* プロフィールアイコン + サモナー名 */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <img
+                            src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
+                              player.profileIcon || 29
+                            }.png`}
+                            alt="Profile Icon"
+                            className="profile-icon-registration"
+                            onError={(e) => {
+                              e.currentTarget.src =
+                                "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
+                            }}
+                          />
+                          <span className="summoner-name-registration">
+                            {player.summonerName}#{player.tag}
+                          </span>
+                        </div>
+
+                        {/* ランク選択 */}
+                        <select
+                          value={
+                            player.rank
+                              ? `${player.tier}-${player.rank}`
+                              : player.tier
+                          }
+                          onChange={(e) => {
+                            const [newTier, newRank] =
+                              e.target.value.split("-");
+                            changePlayerRank(player.id, newTier, newRank);
+                          }}
+                          className="rank-select-registration"
+                          style={{ flexShrink: 0 }}
+                        >
+                          {RANK_OPTIONS.map((option) => (
+                            <option
+                              key={`${option.tier}-${option.rank}`}
+                              value={
+                                option.rank
+                                  ? `${option.tier}-${option.rank}`
+                                  : option.tier
+                              }
+                            >
+                              {option.display}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* 希望ロール */}
+                        {gameMode === "summoners-rift" && (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {ROLES.map((role) => {
+                              const isSelected =
+                                player.preferredRoles.includes(role);
+                              return (
+                                <button
+                                  key={role}
+                                  onClick={() =>
+                                    togglePlayerRole(player.id, role)
+                                  }
+                                  className={
+                                    isSelected
+                                      ? "role-button-registration-selected"
+                                      : "role-button-registration-unselected"
+                                  }
+                                >
+                                  <RoleIcon role={role} size={12} />
+                                  {role}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 右側グループ: バッジ + ボタン群 */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {/* ボタン群 */}
+                        {gameMode === "summoners-rift" &&
+                          player.preferredRoles.length > 0 &&
+                          player.preferredRoles.length < ROLES.length && (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: "2px",
+                              }}
+                            >
+                              <button
+                                className={`btn-small btn-role-lock ${
+                                  player.strictRoleMatch ? "locked" : ""
+                                }`}
+                                onClick={() => toggleStrictRoleMatch(player.id)}
+                                title={
+                                  player.strictRoleMatch
+                                    ? "希望ロール最優先を解除"
+                                    : "希望ロール最優先にする"
+                                }
+                              >
+                                {player.strictRoleMatch ? "🔒" : "🔓"}
+                              </button>
+                              <span
+                                style={{
+                                  fontSize: "0.5rem",
+                                  color: "#9ca3af",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                希望ロール最優先
+                              </span>
+                            </div>
+                          )}
+                        {players.length > 10 && (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "2px",
+                            }}
+                          >
+                            <button
+                              className={`btn-small btn-pin ${
+                                player.isFixed && players.length > 10
+                                  ? "pinned"
+                                  : ""
+                              }`}
+                              onClick={() => toggleFixedPlayer(player.id)}
+                              title={
+                                player.isFixed ? "参加確定解除" : "参加確定する"
+                              }
+                            >
+                              {player.isFixed ? "📌" : "📍"}
+                            </button>
+                            <span
+                              style={{
+                                fontSize: "0.5rem",
+                                color: "#9ca3af",
+                                lineHeight: 1,
+                              }}
+                            >
+                              参加確定
+                            </span>
+                          </div>
+                        )}
+
+                        {/* 観戦ボタン */}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: "2px",
+                          }}
+                        >
+                          <button
+                            className="btn-small btn-watch"
+                            onClick={() => moveToObserver(player.id)}
+                            title="観戦へ移動"
+                          >
+                            👀
+                          </button>
+                          <span
+                            style={{
+                              fontSize: "0.5rem",
+                              color: "#9ca3af",
+                              lineHeight: 1,
+                            }}
+                          >
+                            観戦へ
+                          </span>
+                        </div>
+                        {/* 削除ボタン */}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: "2px",
+                          }}
+                        >
+                          <button
+                            className="btn-small btn-remove"
+                            onClick={() => removePlayer(player.id)}
+                            title="削除"
+                          >
+                            <svg
+                              width="20"
+                              height="20"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{
+                                display: "block",
+                              }}
+                            >
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          </button>
+                          <span
+                            style={{
+                              fontSize: "0.5rem",
+                              color: "#9ca3af",
+                              lineHeight: 1,
+                            }}
+                          >
+                            削除
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
-            <div className="space-y-2">
-              {(() => {
-                const sorted = [...observerPlayers];
-                switch (sortType) {
-                  case "name":
-                    return sorted.sort((a, b) => {
-                      const nameA = `${a.summonerName}#${a.tag}`.toLowerCase();
-                      const nameB = `${b.summonerName}#${b.tag}`.toLowerCase();
-                      return nameA.localeCompare(nameB);
-                    });
-                  case "rating-high":
-                    return sorted.sort((a, b) => b.rating - a.rating);
-                  case "rating-low":
-                    return sorted.sort((a, b) => a.rating - b.rating);
-                  default:
-                    return sorted;
-                }
-              })().map((player) => (
+            {observerPlayers.length > 0 && (
+              <>
                 <div
-                  key={player.id}
-                  data-observer-id={player.id}
-                  className="player-card-registration"
                   style={{
                     display: "flex",
-                    flexDirection: "row",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    justifyContent: "flex-start",
-                    gap: "0.75rem",
-                    flexWrap: "nowrap",
                   }}
                 >
-                  {/* 左側: アイコンとサモナー名 */}
+                  <h2 className="section-title" style={{ marginTop: 25 }}>
+                    👀️ 観戦 ({observerPlayers.length}人)
+                  </h2>
+                </div>
+                <div className="players-list-wrapper">
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.5rem",
-                      flexShrink: 0,
+                      padding: "0rem 0.75rem",
+                      background: "rgba(100, 100, 100, 0.2)",
+                      borderRadius: "0.25rem",
+                      marginBottom: "0.5rem",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      color: "#9ca3af",
+                      minWidth: "800px",
                     }}
                   >
-                    <img
-                      src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
-                        player.profileIcon || 29
-                      }.png`}
-                      alt="Profile Icon"
-                      className="profile-icon-registration"
-                      onError={(e) => {
-                        e.currentTarget.src =
-                          "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
-                      }}
-                    />
-                    <span className="summoner-name-registration">
-                      {player.summonerName}#{player.tag}
-                    </span>
-                  </div>
-
-                  {/* ランク選択 */}
-                  <select
-                    value={
-                      player.rank
-                        ? `${player.tier}-${player.rank}`
-                        : player.tier
-                    }
-                    onChange={(e) => {
-                      const [newTier, newRank] = e.target.value.split("-");
-                      changePlayerRank(player.id, newTier, newRank);
-                    }}
-                    className="rank-select-registration"
-                    style={{ flexShrink: 0 }}
-                  >
-                    {RANK_OPTIONS.map((option) => (
-                      <option
-                        key={`${option.tier}-${option.rank}`}
-                        value={
-                          option.rank
-                            ? `${option.tier}-${option.rank}`
-                            : option.tier
-                        }
-                      >
-                        {option.display}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* 希望ロール選択 */}
-                  {gameMode === "summoners-rift" && (
+                    <div style={{ width: "40px", flexShrink: 0 }}></div>
                     <div
                       style={{
-                        display: "flex",
-                        gap: "0.25rem",
+                        width: "115px",
                         flexShrink: 0,
+                        marginLeft: "0.5rem",
                       }}
                     >
-                      {ROLES.map((role) => {
-                        const isSelected = player.preferredRoles.includes(role);
-                        return (
-                          <button
-                            key={role}
-                            onClick={() => togglePlayerRole(player.id, role)}
-                            className={
-                              isSelected
-                                ? "role-button-registration-selected"
-                                : "role-button-registration-unselected"
-                            }
-                          >
-                            <RoleIcon role={role} size={12} />
-                            {role}
-                          </button>
-                        );
-                      })}
+                      サモナー名
                     </div>
-                  )}
-
-                  {/* 右側: ボタン */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "0.5rem",
-                      marginLeft: "auto",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {/* 参加へボタン */}
                     <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "2px",
+                      className={`sort-header-rank ${
+                        sortType !== "none" ? "sort-header-rank-active" : ""
+                      }`}
+                      onClick={() => {
+                        if (sortType === "rating-high") {
+                          setSortType("rating-low");
+                        } else if (sortType === "rating-low") {
+                          setSortType("none");
+                        } else {
+                          setSortType("rating-high");
+                        }
                       }}
+                      title="クリックでソート切替"
                     >
-                      <button
-                        onClick={() => moveToPlaying(player.id)}
-                        className="btn-small"
-                        style={{
-                          background: "#16a34a",
-                          color: "white",
-                          padding: "0.5rem",
-                          borderRadius: "6px",
-                          border: "none",
-                          cursor: "pointer",
-                          minWidth: "36px",
-                        }}
-                        title="参加へ"
-                      >
-                        👥
-                      </button>
-                      <span
-                        style={{
-                          fontSize: "0.5rem",
-                          color: "#9ca3af",
-                          lineHeight: 1,
-                        }}
-                      >
-                        参加へ
+                      <span className="sort-header-label">ランク</span>
+                      <span className="sort-header-icon">
+                        {sortType === "rating-high" && "▼"}
+                        {sortType === "rating-low" && "▲"}
+                        {sortType === "none" && "⇅"}
                       </span>
                     </div>
-
-                    {/* 削除ボタン */}
+                    {gameMode === "summoners-rift" && (
+                      <div style={{ flex: 1, marginLeft: "0.75rem" }}>
+                        希望ロール
+                      </div>
+                    )}
                     <div
                       style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "2px",
+                        marginLeft: "auto",
+                        paddingRight: "0.5rem",
+                        textAlign: "center",
                       }}
                     >
-                      <button
-                        onClick={() => removePlayer(player.id)}
-                        className="btn-small btn-remove"
+                      操作
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {(() => {
+                      const sorted = [...observerPlayers];
+                      switch (sortType) {
+                        case "name":
+                          return sorted.sort((a, b) => {
+                            const nameA =
+                              `${a.summonerName}#${a.tag}`.toLowerCase();
+                            const nameB =
+                              `${b.summonerName}#${b.tag}`.toLowerCase();
+                            return nameA.localeCompare(nameB);
+                          });
+                        case "rating-high":
+                          return sorted.sort((a, b) => b.rating - a.rating);
+                        case "rating-low":
+                          return sorted.sort((a, b) => a.rating - b.rating);
+                        default:
+                          return sorted;
+                      }
+                    })().map((player) => (
+                      <div
+                        key={player.id}
+                        data-observer-id={player.id}
+                        className="player-card-registration"
+                        style={{
+                          display: "flex",
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "flex-start",
+                          gap: "0.75rem",
+                          flexWrap: "nowrap",
+                        }}
                       >
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                        {/* 左側: アイコンとサモナー名 */}
+                        <div
                           style={{
-                            display: "block",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            flexShrink: 0,
                           }}
                         >
-                          <line x1="18" y1="6" x2="6" y2="18"></line>
-                          <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                      </button>
-                      <span
-                        style={{
-                          fontSize: "0.5rem",
-                          color: "#9ca3af",
-                          lineHeight: 1,
-                        }}
-                      >
-                        削除
-                      </span>
-                    </div>
+                          <img
+                            src={`https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/${
+                              player.profileIcon || 29
+                            }.png`}
+                            alt="Profile Icon"
+                            className="profile-icon-registration"
+                            onError={(e) => {
+                              e.currentTarget.src =
+                                "https://ddragon.leagueoflegends.com/cdn/15.20.1/img/profileicon/29.png";
+                            }}
+                          />
+                          <span className="summoner-name-registration">
+                            {player.summonerName}#{player.tag}
+                          </span>
+                        </div>
+
+                        {/* ランク選択 */}
+                        <select
+                          value={
+                            player.rank
+                              ? `${player.tier}-${player.rank}`
+                              : player.tier
+                          }
+                          onChange={(e) => {
+                            const [newTier, newRank] =
+                              e.target.value.split("-");
+                            changePlayerRank(player.id, newTier, newRank);
+                          }}
+                          className="rank-select-registration"
+                          style={{ flexShrink: 0 }}
+                        >
+                          {RANK_OPTIONS.map((option) => (
+                            <option
+                              key={`${option.tier}-${option.rank}`}
+                              value={
+                                option.rank
+                                  ? `${option.tier}-${option.rank}`
+                                  : option.tier
+                              }
+                            >
+                              {option.display}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* 希望ロール選択 */}
+                        {gameMode === "summoners-rift" && (
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.25rem",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {ROLES.map((role) => {
+                              const isSelected =
+                                player.preferredRoles.includes(role);
+                              return (
+                                <button
+                                  key={role}
+                                  onClick={() =>
+                                    togglePlayerRole(player.id, role)
+                                  }
+                                  className={
+                                    isSelected
+                                      ? "role-button-registration-selected"
+                                      : "role-button-registration-unselected"
+                                  }
+                                >
+                                  <RoleIcon role={role} size={12} />
+                                  {role}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* 右側: ボタン */}
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "0.5rem",
+                            marginLeft: "auto",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {/* 参加へボタン */}
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "2px",
+                            }}
+                          >
+                            <button
+                              onClick={() => moveToPlaying(player.id)}
+                              className="btn-small"
+                              style={{
+                                background: "#16a34a",
+                                color: "white",
+                                padding: "0.5rem",
+                                borderRadius: "6px",
+                                border: "none",
+                                cursor: "pointer",
+                                minWidth: "36px",
+                              }}
+                              title="参加へ"
+                            >
+                              👥
+                            </button>
+                            <span
+                              style={{
+                                fontSize: "0.5rem",
+                                color: "#9ca3af",
+                                lineHeight: 1,
+                              }}
+                            >
+                              参加へ
+                            </span>
+                          </div>
+
+                          {/* 削除ボタン */}
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "2px",
+                            }}
+                          >
+                            <button
+                              onClick={() => removePlayer(player.id)}
+                              className="btn-small btn-remove"
+                            >
+                              <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                style={{
+                                  display: "block",
+                                }}
+                              >
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                              </svg>
+                            </button>
+                            <span
+                              style={{
+                                fontSize: "0.5rem",
+                                color: "#9ca3af",
+                                lineHeight: 1,
+                              }}
+                            >
+                              削除
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
             <AdBanner slot="9876543210" format="horizontal" />
           </div>
         )}
